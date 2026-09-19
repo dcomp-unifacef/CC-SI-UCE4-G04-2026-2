@@ -1,11 +1,10 @@
 {
   "compilerOptions": {
-    "rootDir": "./src",
     "outDir": "./dist",
-    "module": "es2022",
+    "module": "esnext",
     "target": "esnext",
     "moduleResolution": "bundler",
-    "types": [],
+    "types": ["node", "typescript"],
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "noUncheckedIndexedAccess": true,
@@ -13,5 +12,5 @@
     "strict": true,
     "skipLibCheck": true
   },
-  "include": ["src/**/*"]
+  "include": ["src/**/*", "prisma7.config.ts"]
 }

@@ -1,4 +1,8 @@
-import express, { Request, Response, NextFunction } from 'express';
+import express, {
+  type Request,
+  type Response,
+  type NextFunction,
+} from 'express';
 import logger from 'morgan';
 import cors from 'cors';
 import { NotFoundError } from './errors/NotFoundError';
@@ -14,13 +18,13 @@ app.use(cors());
 
 // Rotas
 app.get('/', (_req: Request, res: Response) => {
-    res.send('Hello World!');
+  res.send('Hello World!');
 });
 
 // Fallback
 app.use((req: Request, _res: Response, next: NextFunction) => {
-    next(new NotFoundError(`Route ${req.originalUrl} does not exist`));
-})
+  next(new NotFoundError(`Route ${req.originalUrl} does not exist`));
+});
 
 // Middleware de Tratamento de Erros
 app.use(errorHandler);
