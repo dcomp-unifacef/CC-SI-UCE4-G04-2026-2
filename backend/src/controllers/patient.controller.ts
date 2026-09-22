@@ -1,110 +1,56 @@
-import type {
-  Request,
-  Response,
-  NextFunction,
-} from "express";
+import { type Request, type Response, type NextFunction } from 'express';
+import * as service from '../services/patient.service'
 
-import * as repository from "../repositories/patient.respository.ts";
-
-import type { CreatePatientDto } from "../dto/patient/create.patient.dto.ts";
-import type { UpdatePatientDto } from "../dto/patient/update.patient.dto.ts";
-
-type PatientIdParams = {
-  id: string;
-};
-
-type CreatePatientRequest = Request<
-  Record<string, never>,
-  unknown,
-  CreatePatientDto
->;
-
-type UpdatePatientRequest = Request<
-  PatientIdParams,
-  unknown,
-  UpdatePatientDto
->;
-
-export async function retrieveAll(
-  req: Request,
-  res: Response,
-  next: NextFunction
-): Promise<void> {
+export async function getPatients(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const patients = await repository.findAll();
-
+    const patients = await service.findAll();
     res.json(patients);
-  }
-  catch (error) {
-    next(error);
+  } catch (e) {
+    next(e);
   }
 }
 
-export async function retrieveOne(
-  req: Request<PatientIdParams>,
-  res: Response,
-  next: NextFunction
-): Promise<void> {
+export async function getPatientById(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const id = req.params.id;
-
-    const patient = await repository.findById(id);
-
+    const patient = await service.findById(String(req.params.id))
     res.json(patient);
-  }
-  catch (error) {
-    next(error);
+  } catch (e) {
+    next(e)
   }
 }
 
-export async function create(
-  req: CreatePatientRequest,
-  res: Response,
-  next: NextFunction
-): Promise<void> {
+export async function getPatientByEmail(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const patient = await repository.create(req.body);
+    const patient = await service.findByEmail(String(req.params.email))
+    res.json(patient);
+  } catch (e) {
+    next(e)
+  }
+}
 
+export async function createPatient(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const patient = await service.create(req.body);
     res.status(201).json(patient);
-  }
-  catch (error) {
-    next(error);
+  } catch (e) {
+    next(e)
   }
 }
 
-export async function update(
-  req: UpdatePatientRequest,
-  res: Response,
-  next: NextFunction
-): Promise<void> {
+export async function updatePatient(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const id = req.params.id;
-
-    const patient = await repository.update(
-      id,
-      req.body
-    );
-
+    const patient = await service.update(String(req.params.id), { ...req.body });
     res.json(patient);
-  }
-  catch (error) {
-    next(error);
+  } catch (e) {
+    next(e)
   }
 }
 
-export async function remove(
-  req: Request<PatientIdParams>,
-  res: Response,
-  next: NextFunction
-): Promise<void> {
+export async function removePatient(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const id = req.params.id;
-
-    await repository.remove(id);
-
+    const patient = await service.remove(String(req.params.id));
     res.status(204).end();
-  }
-  catch (error) {
-    next(error);
+  } catch (e) {
+    next(e)
   }
 }

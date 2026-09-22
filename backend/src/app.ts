@@ -7,6 +7,7 @@ import logger from 'morgan';
 import cors from 'cors';
 import { NotFoundError } from './errors/NotFoundError';
 import { errorHandler } from './middlewares/errorHandler';
+import patientsRouter from './routes/patient';
 
 const app = express();
 
@@ -17,9 +18,7 @@ app.use(logger('dev'));
 app.use(cors());
 
 // Rotas
-app.get('/', (_req: Request, res: Response) => {
-  res.send('Hello World!');
-});
+app.use('/patients', patientsRouter)
 
 // Fallback
 app.use((req: Request, _res: Response, next: NextFunction) => {

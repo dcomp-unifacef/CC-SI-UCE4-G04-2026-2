@@ -1,42 +1,48 @@
-import { prisma } from "../server/prisma";
+import { prisma } from '../db/prisma';
+import type { CreatePatientDto } from '../dto/patient/create.patient.dto.ts';
+import type { UpdatePatientDto } from '../dto/patient/update.patient.dto.ts';
 
-import type { CreatePatientDto } from "../dto/patient/create.patient.dto.ts";
-
-import type { UpdatePatientDto } from "../dto/patient/update.patient.dto.ts";
-
-export function findAll() {
-  return prisma.patient.findMany({
+export async function findAll() {
+  return await prisma.patient.findMany({
     orderBy: {
-      name: "asc",
+      name: 'asc',
     },
   });
 }
 
-export function findById(id: string) {
-  return prisma.patient.findUnique({
+export async function findById(id: string) {
+  return await prisma.patient.findUnique({
     where: { id },
   });
 }
 
-export function create(data: CreatePatientDto) {
-  return prisma.patient.create({
+export async function findByEmail(email: string) {
+  return await prisma.patient.findUnique({
+    where: { email },
+  });
+}
+
+export async function create(data: CreatePatientDto) {
+  return await prisma.patient.create({
     data: {
       ...data,
+      birthDate: data.birthDate ? new Date(data.birthDate) : null,
     },
   });
 }
 
-export function update(id: string, data: UpdatePatientDto) {
-  return prisma.patient.update({
+export async function update(id: string, data: UpdatePatientDto) {
+  return await prisma.patient.update({
     where: { id },
     data: {
       ...data,
+      birthDate: data.birthDate ? new Date(data.birthDate) : undefined as any,
     },
   });
 }
 
-export function remove(id: string) {
-  return prisma.patient.delete({
+export async function remove(id: string) {
+  return await prisma.patient.delete({
     where: { id },
   });
 }
