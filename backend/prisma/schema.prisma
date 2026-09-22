@@ -84,7 +84,7 @@ enum AuditAction {
 }
 
 model User {
-  id        String     @id @default(uuid())
+  id        String     @id @default(uuid()) @db.Uuid
   name      String
   email     String     @unique
   photoUrl  String?
@@ -107,12 +107,12 @@ model User {
 }
 
 model Patient {
-  id        String    @id @default(uuid())
+  id        String    @id @default(uuid()) @db.Uuid
   name      String
   cpf       String?   @unique
   birthDate DateTime?
   phone     String?
-  email     String?
+  email     String?   @unique
   address   String?
   city      String?
   state     String?
@@ -133,7 +133,7 @@ model Patient {
 }
 
 model Device {
-  id              String       @id @default(uuid())
+  id              String       @id @default(uuid()) @db.Uuid
   serialNumber    String       @unique
   manufacturer    String?
   model           String?
@@ -152,9 +152,9 @@ model Device {
 }
 
 model PatientDevice {
-  id           String    @id @default(uuid())
-  patientId    String
-  deviceId     String
+  id           String    @id @default(uuid()) @db.Uuid
+  patientId    String    @db.Uuid
+  deviceId     String    @db.Uuid
   assignedAt   DateTime  @default(now())
   unassignedAt DateTime?
   notes        String?
@@ -169,7 +169,7 @@ model PatientDevice {
 }
 
 model Product {
-  id           String          @id @default(uuid())
+  id           String          @id @default(uuid()) @db.Uuid
   productCode  String
   name         String
   description  String?
@@ -191,9 +191,9 @@ model Product {
 }
 
 model StockMovement {
-  id        String            @id @default(uuid())
-  productId String
-  userId    String
+  id        String            @id @default(uuid()) @db.Uuid
+  productId String            @db.Uuid
+  userId    String            @db.Uuid
   type      StockMovementType
   quantity  Int
   reason    String?
@@ -211,9 +211,9 @@ model StockMovement {
 }
 
 model Sale {
-  id          String   @id @default(uuid())
-  patientId   String?
-  userId      String
+  id          String   @id @default(uuid()) @db.Uuid
+  patientId   String?  @db.Uuid
+  userId      String   @db.Uuid
   totalAmount Decimal  @db.Decimal(10, 2)
   notes       String?
   soldAt      DateTime @default(now())
@@ -232,9 +232,9 @@ model Sale {
 }
 
 model SaleItem {
-  id        String  @id @default(uuid())
-  saleId    String
-  productId String
+  id        String  @id @default(uuid()) @db.Uuid
+  saleId    String  @db.Uuid
+  productId String  @db.Uuid
   quantity  Int
   unitPrice Decimal @db.Decimal(10, 2)
   subtotal  Decimal @db.Decimal(10, 2)
@@ -248,9 +248,9 @@ model SaleItem {
 }
 
 model Report {
-  id          String       @id @default(uuid())
-  patientId   String
-  createdById String?
+  id          String       @id @default(uuid()) @db.Uuid
+  patientId   String       @db.Uuid
+  createdById String?      @db.Uuid
   title       String
   description String?
   periodStart DateTime?
@@ -273,9 +273,9 @@ model Report {
 }
 
 model Appointment {
-  id            String            @id @default(uuid())
-  patientId     String?
-  userId        String
+  id            String            @id @default(uuid()) @db.Uuid
+  patientId     String?           @db.Uuid
+  userId        String            @db.Uuid
   title         String
   description   String?
   location      String?
@@ -299,9 +299,9 @@ model Appointment {
 }
 
 model Notification {
-  id            String              @id @default(uuid())
-  userId        String
-  appointmentId String?
+  id            String              @id @default(uuid()) @db.Uuid
+  userId        String              @db.Uuid
+  appointmentId String?             @db.Uuid
   type          NotificationChannel
   title         String
   message       String
@@ -321,8 +321,8 @@ model Notification {
 }
 
 model AuditLog {
-  id        String      @id @default(uuid())
-  userId    String?
+  id        String      @id @default(uuid()) @db.Uuid
+  userId    String?     @db.Uuid
   action    AuditAction
   entity    String
   entityId  String?
