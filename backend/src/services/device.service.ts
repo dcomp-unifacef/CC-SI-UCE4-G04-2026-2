@@ -1,6 +1,6 @@
 import { CreateDeviceDto } from '../dto/device/create.device.dto';
 import { UpdateDeviceDto } from '../dto/device/update.device.dto';
-import { ConflictException } from '../errors/ConflictException';
+import { ConflictError } from '../errors/ConflictError';
 import { NotFoundError } from '../errors/NotFoundError';
 import { Device } from '../generated/prisma/client';
 import * as repository from '../repositories/device.respository';
@@ -21,7 +21,7 @@ export async function findById(id: string): Promise<Device> {
 export async function create(data: CreateDeviceDto): Promise<Device> {
   const exists = await repository.findBySerialNumber(data.serialNumber);
 
-  if (exists) throw new ConflictException('Device already exists');
+  if (exists) throw new ConflictError('Device already exists');
 
   return repository.create(data);
 }

@@ -1,6 +1,6 @@
 import { CreatePatientDto } from '../dto/patient/create.patient.dto';
 import { UpdatePatientDto } from '../dto/patient/update.patient.dto';
-import { ConflictException } from '../errors/ConflictException';
+import { ConflictError } from '../errors/ConflictError';
 import { NotFoundError } from '../errors/NotFoundError';
 import { Patient } from '../generated/prisma/client';
 import * as repository from '../repositories/patient.respository';
@@ -28,7 +28,7 @@ export async function findByEmail(email: string): Promise<Patient> {
 export async function create(data: CreatePatientDto): Promise<Patient> {
   const exists = await repository.findByEmail(data.email as any);
 
-  if (exists) throw new ConflictException('Patient already exists');
+  if (exists) throw new ConflictError('Patient already exists');
 
   return repository.create(data);
 }
