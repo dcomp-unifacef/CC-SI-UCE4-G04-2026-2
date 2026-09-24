@@ -1,5 +1,4 @@
 export type CreatePatientDto = {
-  id: string; 
   name: string;      
   cpf?: string;
   birthDate?: Date | string;

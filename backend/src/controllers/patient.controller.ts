@@ -19,14 +19,6 @@ export async function getPatientById(req: Request, res: Response, next: NextFunc
   }
 }
 
-export async function getPatientByEmail(req: Request, res: Response, next: NextFunction): Promise<void> {
-  try {
-    const patient = await service.findByEmail(String(req.params.email))
-    res.json(patient);
-  } catch (e) {
-    next(e)
-  }
-}
 
 export async function createPatient(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
@@ -48,7 +40,7 @@ export async function updatePatient(req: Request, res: Response, next: NextFunct
 
 export async function removePatient(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const patient = await service.remove(String(req.params.id));
+    await service.remove(String(req.params.id));
     res.status(204).end();
   } catch (e) {
     next(e)

@@ -8,6 +8,7 @@ import cors from 'cors';
 import { NotFoundError } from './errors/NotFoundError';
 import { errorHandler } from './middlewares/errorHandler';
 import patientsRouter from './routes/patient';
+import deviceRouter from './routes/device';
 
 const app = express();
 
@@ -18,7 +19,8 @@ app.use(logger('dev'));
 app.use(cors());
 
 // Rotas
-app.use('/patients', patientsRouter)
+app.use('/patients', patientsRouter);
+app.use('/devices', deviceRouter);
 
 // Fallback
 app.use((req: Request, _res: Response, next: NextFunction) => {

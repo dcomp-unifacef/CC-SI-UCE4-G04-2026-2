@@ -1,5 +1,4 @@
 export type UpdatePatientDto = {
-  id?: string; 
   name?: string;      
   cpf?: string;
   birthDate?: Date | string;
