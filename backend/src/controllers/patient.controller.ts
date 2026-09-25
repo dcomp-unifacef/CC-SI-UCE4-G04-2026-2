@@ -1,7 +1,7 @@
 import { type Request, type Response, type NextFunction } from 'express';
 import * as service from '../services/patient.service'
 
-export async function getPatients(req: Request, res: Response, next: NextFunction): Promise<void> {
+export async function getPatients(_req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const patients = await service.findAll();
     res.json(patients);
@@ -12,13 +12,12 @@ export async function getPatients(req: Request, res: Response, next: NextFunctio
 
 export async function getPatientById(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const patient = await service.findById(String(req.params.id))
+    const patient = await service.findById(String(req.params.id));
     res.json(patient);
   } catch (e) {
     next(e)
   }
 }
-
 
 export async function createPatient(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {

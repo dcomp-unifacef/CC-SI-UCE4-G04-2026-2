@@ -1,7 +1,7 @@
 import { type Request, type Response, type NextFunction } from 'express';
 import * as service from '../services/device.service'
 
-export async function getDevices(req: Request, res: Response, next: NextFunction): Promise<void> {
+export async function getDevices(_req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const devices = await service.findAll();
     res.json(devices);
@@ -12,7 +12,7 @@ export async function getDevices(req: Request, res: Response, next: NextFunction
 
 export async function getDeviceById(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const device = await service.findById(String(req.params.id))
+    const device = await service.findById(String(req.params.id));
     res.json(device);
   } catch (e) {
     next(e)

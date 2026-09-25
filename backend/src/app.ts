@@ -5,10 +5,11 @@ import express, {
 } from 'express';
 import logger from 'morgan';
 import cors from 'cors';
+import 'reflect-metadata';
 import { NotFoundError } from './errors/NotFoundError';
-import { errorHandler } from './middlewares/errorHandler';
-import patientsRouter from './routes/patient';
-import deviceRouter from './routes/device';
+import { errorHandler } from './middlewares/errorHandler.middleware';
+import patientsRouter from './routes/patient.route';
+import deviceRouter from './routes/device.route';
 
 const app = express();
 

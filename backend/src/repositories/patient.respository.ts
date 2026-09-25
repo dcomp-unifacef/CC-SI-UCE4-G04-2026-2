@@ -1,6 +1,6 @@
 import { prisma } from '../db/prisma';
-import type { CreatePatientDto } from '../dto/patient/create.patient.dto.ts';
-import type { UpdatePatientDto } from '../dto/patient/update.patient.dto.ts';
+import type { CreatePatientDto } from '../dto/patient/create.patient.dto';
+import type { UpdatePatientDto } from '../dto/patient/update.patient.dto';
 
 export async function findAll() {
   return await prisma.patient.findMany({
@@ -24,20 +24,14 @@ export async function findByEmail(email: string) {
 
 export async function create(data: CreatePatientDto) {
   return await prisma.patient.create({
-    data: {
-      ...data,
-      birthDate: data.birthDate ? new Date(data.birthDate) : null,
-    },
+    data,
   });
 }
 
 export async function update(id: string, data: UpdatePatientDto) {
   return await prisma.patient.update({
     where: { id },
-    data: {
-      ...data,
-      birthDate: data.birthDate ? new Date(data.birthDate) : undefined as any,
-    },
+    data,
   });
 }
 

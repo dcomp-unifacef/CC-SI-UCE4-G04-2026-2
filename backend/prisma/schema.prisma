@@ -110,7 +110,7 @@ model Patient {
   id        String    @id @default(uuid()) @db.Uuid
   name      String
   cpf       String?   @unique
-  birthDate DateTime?
+  birthDate DateTime? @db.Date
   phone     String?
   email     String?   @unique
   address   String?
