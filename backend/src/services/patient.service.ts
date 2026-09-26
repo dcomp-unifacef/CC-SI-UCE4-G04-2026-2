@@ -12,7 +12,7 @@ export async function findAll(): Promise<Patient[]> {
 export async function findById(id: string): Promise<Patient> {
   const patient = await repository.findById(id);
 
-  if (!patient) throw new NotFoundError('Patient not exists');
+  if (!patient) throw new NotFoundError('Patient not found');
 
   return patient;
 }
@@ -20,7 +20,7 @@ export async function findById(id: string): Promise<Patient> {
 export async function findByEmail(email: string): Promise<Patient> {
   const patient = await repository.findByEmail(email);
 
-  if (!patient) throw new NotFoundError('Patient not exists');
+  if (!patient) throw new NotFoundError('Patient not found');
 
   return patient;
 }
@@ -30,22 +30,21 @@ export async function create(data: CreatePatientDto): Promise<Patient> {
 
   if (exists) throw new ConflictError('Patient already exists');
 
-  return repository.create(data);
+  return await repository.create(data);
 }
 
 export async function update(id: string, data: UpdatePatientDto): Promise<Patient> {
   const exists = await repository.findById(id);
 
-  if (!exists) throw new NotFoundError('Patient not exists');
+  if (!exists) throw new NotFoundError('Patient not found');
 
-  const patient = await repository.update(id, data);
-  return patient;
+  return await repository.update(id, data);
 }
 
-export async function remove(id: string) {
+export async function remove(id: string): Promise<Patient> {
   const patient = await repository.findById(id);
 
-  if (!patient) throw new NotFoundError('Patient not exists');
+  if (!patient) throw new NotFoundError('Patient not found');
 
-  return repository.remove(id);
+  return await repository.remove(id);
 }

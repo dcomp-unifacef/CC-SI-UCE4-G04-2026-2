@@ -31,7 +31,7 @@ export async function create(data: CreateDeviceDto) {
 export async function update(id: string, data: UpdateDeviceDto) {
   return await prisma.device.update({
     where: { id },
-    data
+    data,
   });
 }
 

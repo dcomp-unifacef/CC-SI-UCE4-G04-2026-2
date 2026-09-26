@@ -10,6 +10,7 @@ import { NotFoundError } from './errors/NotFoundError';
 import { errorHandler } from './middlewares/errorHandler.middleware';
 import patientsRouter from './routes/patient.route';
 import deviceRouter from './routes/device.route';
+import patientDeviceRouter from './routes/patientDevice.route';
 
 const app = express();
 
@@ -22,6 +23,7 @@ app.use(cors());
 // Rotas
 app.use('/patients', patientsRouter);
 app.use('/devices', deviceRouter);
+app.use('/patient-devices', patientDeviceRouter);
 
 // Fallback
 app.use((req: Request, _res: Response, next: NextFunction) => {

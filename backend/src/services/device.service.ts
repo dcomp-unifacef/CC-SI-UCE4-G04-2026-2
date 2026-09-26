@@ -12,7 +12,7 @@ export async function findAll(): Promise<Device[]> {
 export async function findById(id: string): Promise<Device> {
   const device = await repository.findById(id);
 
-  if (!device) throw new NotFoundError('Device not exists');
+  if (!device) throw new NotFoundError('Device not found');
 
   return device;
 }
@@ -23,22 +23,21 @@ export async function create(data: CreateDeviceDto): Promise<Device> {
 
   if (exists) throw new ConflictError('Device already exists');
 
-  return repository.create(data);
+  return await repository.create(data);
 }
 
 export async function update(id: string, data: UpdateDeviceDto): Promise<Device> {
   const exists = await repository.findById(id);
 
-  if (!exists) throw new NotFoundError('Device not exists');
+  if (!exists) throw new NotFoundError('Device not found');
 
-  const device = await repository.update(id, data);
-  return device;
+  return await repository.update(id, data);
 }
 
-export async function remove(id: string) {
+export async function remove(id: string): Promise<Device> {
   const device = await repository.findById(id);
 
-  if (!device) throw new NotFoundError('Device not exists');
+  if (!device) throw new NotFoundError('Device not found');
 
-  return repository.remove(id);
+  return await repository.remove(id);
 }
