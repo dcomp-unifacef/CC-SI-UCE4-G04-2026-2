@@ -11,6 +11,8 @@ import { errorHandler } from './middlewares/errorHandler.middleware';
 import patientsRouter from './routes/patient.route';
 import deviceRouter from './routes/device.route';
 import patientDeviceRouter from './routes/patientDevice.route';
+import userRouter from './routes/user.route';
+import authRouter from './routes/auth.route'
 
 const app = express();
 
@@ -20,10 +22,15 @@ app.use(express.urlencoded({ extended: true }));
 app.use(logger('dev'));
 app.use(cors());
 
-// Rotas
+// Public Routes
+app.use('/auth', authRouter);
+
+
+// App Routes
 app.use('/patients', patientsRouter);
 app.use('/devices', deviceRouter);
 app.use('/patient-devices', patientDeviceRouter);
+app.use('/users', userRouter);
 
 // Fallback
 app.use((req: Request, _res: Response, next: NextFunction) => {
