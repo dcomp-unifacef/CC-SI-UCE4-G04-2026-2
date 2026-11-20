@@ -1,0 +1,109 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@font-face { 
+  font-family: 'Sono Open Sans';
+  src: url('../assets/open-sans.ttf') format('truetype'); 
+  font-weight: normal; 
+  font-style: normal;
+}
+
+/* Paleta institucional (igual nos dois temas) */
+@theme {
+  --font-sans: "Sono Open Sans", ui-sans-serif, system-ui, sans-serif;
+
+  --color-brand-900: #022b40;
+  --color-brand-700: #00405c;
+  --color-brand-500: #246283;
+  --color-brand-300: #7a9eb7;
+  --color-gold: #c4b270;
+}
+
+/* ============ TEMA CLARO ============ */
+:root {
+  --background: #f5f8fb;
+  --surface: #ffffff;            /* cards, inputs, toasts */
+  
+  --foreground: #022b40;         /* títulos da página */
+  --card-foreground: #17384a;    /* títulos dentro de cards */
+  --muted: #64748b;              /* subtítulos, listas */
+  --muted-soft: #71818e;         /* descrições em cards */
+  --placeholder: #94a3b8;
+  
+  --primary: #00405c;
+  --primary-foreground: #ffffff;
+
+  --secondary: #ffffff;          /* botão secundário */
+  --secondary-foreground: #00405c; /* texto do botão secundário e o "404" */
+  
+  --link: #246283;
+
+  --success-bg: #e8f5ef;
+  --success-fg: #267a55;
+  --warning-bg: #fff6df;
+  --warning-fg: #8a641a;
+  --danger-bg: #fdecec;
+  --danger-fg: #b54747;
+  --alert-muted: #526d7c;        /* texto secundário do alerta de sucesso */
+}
+
+/* ============ TEMA ESCURO ============ */
+.dark {
+  --background: #0b1220;
+  --surface: #142235;
+  
+  --foreground: #f1f5f9;
+  --card-foreground: #e2e8f0;
+  --muted: #a9b9c9;
+  --muted-soft: #94a3b8;
+  --placeholder: #94a3b8;
+  
+  --primary: #0b5b7d;
+  --primary-foreground: #ffffff;
+
+  --secondary: #1b2a3d;
+  --secondary-foreground: #7dd3fc;
+  
+  --link: #7cc7e8;
+
+  --success-bg: #15382f;
+  --success-fg: #7bd9a9;
+  --warning-bg: #3a3018;
+  --warning-fg: #f3c969;
+  --danger-bg: #3c2027;
+  --danger-fg: #f28b82;
+  --alert-muted: #a9c4d3;
+}
+
+/* Expõe como utilitários do Tailwind */
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-secondary: var(--secondary);
+
+  --color-foreground: var(--foreground);
+  --color-card-foreground: var(--card-foreground);
+  --color-muted: var(--muted);
+  --color-muted-soft: var(--muted-soft);
+  --color-placeholder: var(--placeholder);
+
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-link: var(--link);
+
+  --color-success-bg: var(--success-bg);
+  --color-success-fg: var(--success-fg);
+  --color-warning-bg: var(--warning-bg);
+  --color-warning-fg: var(--warning-fg);
+  --color-danger-bg: var(--danger-bg);
+  --color-danger-fg: var(--danger-fg);
+  --color-alert-muted: var(--alert-muted);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+}
