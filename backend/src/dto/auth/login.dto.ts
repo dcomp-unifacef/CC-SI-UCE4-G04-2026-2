@@ -1,12 +1,22 @@
-import { IsEmail, IsNotEmpty, IsString } from 'class-validator';
+import { z } from 'zod';
+import { parseDto } from '../shared/zod';
+
+export const loginSchema = z
+  .object({
+    email: z
+      .string()
+      .trim()
+      .min(1)
+      .max(320)
+      .transform((value) => value.toLowerCase()),
+    password: z.string().min(1).max(128),
+  })
+  .strict();
+
+export type LoginInput = z.infer<typeof loginSchema>;
 
 export class LoginDto {
-  @IsEmail({}, { message: 'The provided email is not valid' })
-  @IsString({ message: 'Email must be a valid string' })
-  @IsNotEmpty({ message: 'Email is a required field' })
-  email!: string;
-
-  @IsString({ message: 'Password must be a valid string' })
-  @IsNotEmpty({ message: 'Password is a required field' })
-  password!: string;
+  static parse(value: unknown): LoginInput {
+    return parseDto(loginSchema, value);
+  }
 }

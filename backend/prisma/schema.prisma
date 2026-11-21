@@ -1,8 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
   provider = "prisma-client"
   output   = "../src/generated/prisma"
@@ -14,325 +9,347 @@ datasource db {
 
 enum UserRole {
   ADMIN
-  MANAGER
+  STAFF
 }
 
-enum UserStatus {
-  PENDING
+enum PatientStatus {
   ACTIVE
-  REJECTED
+  PAUSED
   INACTIVE
 }
 
-enum DeviceStatus {
-  AVAILABLE
-  ASSIGNED
-  MAINTENANCE
-  INACTIVE
+enum FilterType {
+  WASHABLE
+  DISPOSABLE
+  UNKNOWN
 }
 
-enum ProductCategory {
-  FILTER
-  HARNESS
-  COVER
-  ACCESSORY
-  CPAP
-  OTHER
-}
-
-enum StockMovementType {
-  IN
-  OUT
-  ADJUSTMENT
-}
-
-enum ReportSource {
+enum ReportPlatform {
   AIRVIEW
   CARE_ORCHESTRATOR
   SMART_LIVE
-  SONO_INTELIGENTE
-  OTHER
+  MANUAL
 }
 
 enum ReportStatus {
-  PENDING
-  AVAILABLE
-  ARCHIVED
+  AWAITING_MATCH
+  PROCESSING
+  REVIEW_REQUIRED
+  APPROVED
+  SENT
+  FAILED
 }
 
-enum AppointmentStatus {
+enum ReportMatchStatus {
+  MATCHED
+  REVIEW_REQUIRED
+  UNMATCHED
+  MANUAL
+}
+
+enum DocumentType {
+  POLYSOMNOGRAPHY
+  OTHER
+}
+
+enum TemplateCategory {
+  FILTER_WASH
+  FILTER_REPLACE_DISPOSABLE
+  FILTER_REPLACE_WASHABLE
+  ANNUAL_MAINTENANCE
+  MONTHLY_REPORT
+  CUSTOM
+}
+
+enum MessageStatus {
   SCHEDULED
-  CONFIRMED
-  COMPLETED
+  PENDING
+  PROCESSING
+  SENT
+  DELIVERED
+  FAILED
   CANCELLED
 }
 
-enum NotificationChannel {
-  IN_APP
-  EMAIL
-  PUSH
+enum MessageChannel {
+  WHATSAPP
 }
 
-enum AuditAction {
-  CREATE
-  UPDATE
-  DELETE
-  LOGIN
-  LOGOUT
-  APPROVE
-  REJECT
+enum AutomationJobType {
+  MESSAGE_SEND
+  REPORT_IMPORT
+  REPORT_PROCESS
+  REPORT_SEND
+  PORTAL_SYNC
+}
+
+enum AutomationJobStatus {
+  QUEUED
+  RUNNING
+  SUCCEEDED
+  FAILED
+  CANCELLED
 }
 
 model User {
-  id        String     @id @default(uuid()) @db.Uuid
-  name      String
-  email     String     @unique
-  photoUrl  String?
-  password  String?
-  role      UserRole   @default(ADMIN)
-  status    UserStatus @default(PENDING)
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
+  id                String            @id @default(uuid()) @db.Uuid
+  name              String            @db.VarChar(120)
+  email             String            @unique @db.VarChar(320)
+  username          String?           @unique @db.VarChar(60)
+  passwordHash      String            @db.VarChar(255)
+  role              UserRole          @default(STAFF)
+  isActive          Boolean           @default(true)
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  sessions          AuthSession[]
+  patientsCreated   Patient[]         @relation("PatientCreatedBy")
+  documentsUploaded PatientDocument[] @relation("DocumentUploader")
+  reportsUploaded   PatientReport[]   @relation("ReportUploader")
+  auditEvents       AuditLog[]        @relation("AuditActor")
+  settingsUpdated   SystemSetting[]   @relation("SettingUpdater")
 
-  appointments   Appointment[]
-  reports        Report[]
-  sales          Sale[]
-  stockMovements StockMovement[]
-  notifications  Notification[]
-  auditLogs      AuditLog[]
+  @@index([isActive, role])
+}
 
-  @@index([status])
-  @@index([role])
-  @@map("users")
+model AuthSession {
+  id               String    @id @default(uuid()) @db.Uuid
+  userId           String    @db.Uuid
+  refreshTokenHash String    @unique @db.VarChar(64)
+  expiresAt        DateTime
+  revokedAt        DateTime?
+  lastUsedAt       DateTime?
+  ipAddress        String?   @db.VarChar(64)
+  userAgent        String?   @db.VarChar(512)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, revokedAt])
+  @@index([expiresAt])
 }
 
 model Patient {
-  id        String    @id @default(uuid()) @db.Uuid
-  name      String
-  cpf       String?   @unique
-  birthDate DateTime? @db.Date
-  phone     String?
-  email     String?   @unique
-  address   String?
-  city      String?
-  state     String?
-  notes     String?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  id               String            @id @default(uuid()) @db.Uuid
+  fullName         String            @db.VarChar(180)
+  phone            String            @db.VarChar(32)
+  birthDate        DateTime?         @db.Date
+  therapyStartDate DateTime?         @db.Date
+  cpf              String?           @unique @db.VarChar(14)
+  cep              String?           @db.VarChar(9)
+  email            String?           @db.VarChar(320)
+  cpapSerialNumber String?           @db.VarChar(120)
+  cpapModelId      String?           @db.Uuid
+  cpapModelName    String?           @db.VarChar(160)
+  filterType       FilterType?
+  physicianName    String?           @db.VarChar(180)
+  maskModel        String?           @db.VarChar(160)
+  reportPlatform   ReportPlatform?
+  status           PatientStatus     @default(ACTIVE)
+  whatsappOptIn    Boolean           @default(false)
+  whatsappOptOutAt DateTime?
+  createdById      String?           @db.Uuid
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  cpapModel        CpapModel?        @relation(fields: [cpapModelId], references: [id], onDelete: SetNull)
+  createdBy        User?             @relation("PatientCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  documents        PatientDocument[]
+  reports          PatientReport[]
+  messages         MessageLog[]
+  jobs             AutomationJob[]
+  auditEvents      AuditLog[]
 
-  devices      PatientDevice[]
-  reports      Report[]
-  appointments Appointment[]
-  sales        Sale[]
-
-  @@index([name])
-  @@index([city])
-  @@index([state])
-  @@index([birthDate])
-  @@map("patients")
+  @@index([fullName])
+  @@index([phone])
+  @@index([cpapSerialNumber])
+  @@index([status, therapyStartDate])
+  @@index([cpapModelId, filterType])
+  @@index([reportPlatform])
 }
 
-model Device {
-  id              String       @id @default(uuid()) @db.Uuid
-  serialNumber    String       @unique
-  manufacturer    String?
-  model           String?
-  status          DeviceStatus @default(AVAILABLE)
-  acquisitionDate DateTime?
-  notes           String?
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
+model CpapModel {
+  id           String     @id @default(uuid()) @db.Uuid
+  manufacturer String     @db.VarChar(120)
+  model        String     @db.VarChar(160)
+  filterType   FilterType @default(UNKNOWN)
+  isActive     Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  patients     Patient[]
 
-  patients PatientDevice[]
-
-  @@index([model])
-  @@index([manufacturer])
-  @@index([status])
-  @@map("devices")
+  @@unique([manufacturer, model])
+  @@index([isActive, filterType])
 }
 
-model PatientDevice {
-  id           String    @id @default(uuid()) @db.Uuid
-  patientId    String    @db.Uuid
-  deviceId     String    @db.Uuid
-  assignedAt   DateTime  @default(now())
-  unassignedAt DateTime?
-  notes        String?
+model PatientDocument {
+  id           String       @id @default(uuid()) @db.Uuid
+  patientId    String       @db.Uuid
+  type         DocumentType @default(POLYSOMNOGRAPHY)
+  originalName String       @db.VarChar(255)
+  storageKey   String       @unique @db.VarChar(255)
+  mimeType     String       @db.VarChar(100)
+  sizeBytes    Int
+  sha256       String       @db.VarChar(64)
+  uploadedById String?      @db.Uuid
+  createdAt    DateTime     @default(now())
+  patient      Patient      @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  uploadedBy   User?        @relation("DocumentUploader", fields: [uploadedById], references: [id], onDelete: SetNull)
 
-  patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  Device  Device  @relation(fields: [deviceId], references: [id], onDelete: Restrict)
-
-  @@index([patientId])
-  @@index([deviceId])
-  @@index([assignedAt])
-  @@map("patient_devices")
+  @@index([patientId, createdAt])
+  @@index([sha256])
 }
 
-model Product {
-  id           String          @id @default(uuid()) @db.Uuid
-  productCode  String
-  name         String
-  description  String?
-  category     ProductCategory
-  unitPrice    Decimal         @db.Decimal(10, 2)
-  minimumStock Int             @default(0)
-  active       Boolean         @default(true)
-  createdAt    DateTime        @default(now())
-  updatedAt    DateTime        @updatedAt
+model PatientReport {
+  id              String            @id @default(uuid()) @db.Uuid
+  patientId       String?           @db.Uuid
+  platform        ReportPlatform
+  periodStart     DateTime?         @db.Date
+  periodEnd       DateTime?         @db.Date
+  status          ReportStatus      @default(AWAITING_MATCH)
+  matchStatus     ReportMatchStatus @default(UNMATCHED)
+  originalName    String            @db.VarChar(255)
+  storageKey      String            @unique @db.VarChar(255)
+  mimeType        String            @db.VarChar(100)
+  sizeBytes       Int
+  sha256          String            @unique @db.VarChar(64)
+  uploadedById    String?           @db.Uuid
+  matchIdentifier String?           @db.VarChar(180)
+  extractedAt     DateTime?
+  approvedAt      DateTime?
+  approvedById    String?           @db.Uuid
+  failureReason   String?           @db.VarChar(1000)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  patient         Patient?          @relation(fields: [patientId], references: [id], onDelete: SetNull)
+  uploadedBy      User?             @relation("ReportUploader", fields: [uploadedById], references: [id], onDelete: SetNull)
+  metrics         ReportMetric[]
+  messages        MessageLog[]
+  jobs            AutomationJob[]
 
-  saleItems      SaleItem[]
-  stockMovements StockMovement[]
-
-  @@index([productCode])
-  @@index([name])
-  @@index([category])
-  @@index([active])
-  @@map("products")
+  @@index([patientId, periodStart, periodEnd])
+  @@index([status, createdAt])
+  @@index([platform, periodStart])
+  @@index([matchStatus])
 }
 
-model StockMovement {
-  id        String            @id @default(uuid()) @db.Uuid
-  productId String            @db.Uuid
-  userId    String            @db.Uuid
-  type      StockMovementType
-  quantity  Int
-  reason    String?
-  unitPrice Decimal?          @db.Decimal(10, 2)
-  createdAt DateTime          @default(now())
+model ReportMetric {
+  id          String        @id @default(uuid()) @db.Uuid
+  reportId    String        @db.Uuid
+  key         String        @db.VarChar(100)
+  value       Decimal?      @db.Decimal(14, 4)
+  valueText   String?       @db.VarChar(255)
+  unit        String?       @db.VarChar(80)
+  sourceLabel String?       @db.VarChar(180)
+  createdAt   DateTime      @default(now())
+  report      PatientReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
 
-  product Product @relation(fields: [productId], references: [id], onDelete: Restrict)
-  user    User    @relation(fields: [userId], references: [id], onDelete: Restrict)
-
-  @@index([productId])
-  @@index([userId])
-  @@index([type])
-  @@index([createdAt])
-  @@map("stock_movements")
+  @@unique([reportId, key])
+  @@index([key])
 }
 
-model Sale {
-  id          String   @id @default(uuid()) @db.Uuid
-  patientId   String?  @db.Uuid
-  userId      String   @db.Uuid
-  totalAmount Decimal  @db.Decimal(10, 2)
-  notes       String?
-  soldAt      DateTime @default(now())
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+model MessageTemplate {
+  id         String           @id @default(uuid()) @db.Uuid
+  code       String           @unique @db.VarChar(100)
+  name       String           @db.VarChar(180)
+  category   TemplateCategory
+  filterType FilterType?
+  body       String           @db.Text
+  mediaUrl   String?          @db.VarChar(2000)
+  isActive   Boolean          @default(true)
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+  messages   MessageLog[]
 
-  patient Patient? @relation(fields: [patientId], references: [id], onDelete: SetNull)
-  user    User     @relation(fields: [userId], references: [id], onDelete: Restrict)
-
-  items SaleItem[]
-
-  @@index([patientId])
-  @@index([userId])
-  @@index([soldAt])
-  @@map("sales")
+  @@index([category, filterType, isActive])
 }
 
-model SaleItem {
-  id        String  @id @default(uuid()) @db.Uuid
-  saleId    String  @db.Uuid
-  productId String  @db.Uuid
-  quantity  Int
-  unitPrice Decimal @db.Decimal(10, 2)
-  subtotal  Decimal @db.Decimal(10, 2)
+model MessageLog {
+  id                String           @id @default(uuid()) @db.Uuid
+  patientId         String           @db.Uuid
+  reportId          String?          @db.Uuid
+  templateId        String?          @db.Uuid
+  channel           MessageChannel   @default(WHATSAPP)
+  category          TemplateCategory
+  status            MessageStatus    @default(SCHEDULED)
+  contentSnapshot   String           @db.Text
+  scheduledAt       DateTime?
+  sentAt            DateTime?
+  providerMessageId String?          @db.VarChar(180)
+  idempotencyKey    String?          @unique @db.VarChar(180)
+  attemptCount      Int              @default(0)
+  errorCode         String?          @db.VarChar(120)
+  errorMessage      String?          @db.VarChar(1000)
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  patient           Patient          @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  report            PatientReport?   @relation(fields: [reportId], references: [id], onDelete: SetNull)
+  template          MessageTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  jobs              AutomationJob[]
 
-  sale    Sale    @relation(fields: [saleId], references: [id], onDelete: Cascade)
-  product Product @relation(fields: [productId], references: [id], onDelete: Restrict)
-
-  @@index([saleId])
-  @@index([productId])
-  @@map("sale_items")
+  @@index([patientId, createdAt])
+  @@index([status, scheduledAt])
+  @@index([category, status])
 }
 
-model Report {
-  id          String       @id @default(uuid()) @db.Uuid
-  patientId   String       @db.Uuid
-  createdById String?      @db.Uuid
-  title       String
-  description String?
-  periodStart DateTime?
-  periodEnd   DateTime?
-  source      ReportSource
-  status      ReportStatus @default(PENDING)
-  fileUrl     String?
-  fileName    String?
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+model AutomationJob {
+  id           String              @id @default(uuid()) @db.Uuid
+  type         AutomationJobType
+  status       AutomationJobStatus @default(QUEUED)
+  patientId    String?             @db.Uuid
+  reportId     String?             @db.Uuid
+  messageLogId String?             @db.Uuid
+  payload      Json?
+  attempts     Int                 @default(0)
+  maxAttempts  Int                 @default(3)
+  scheduledAt  DateTime            @default(now())
+  startedAt    DateTime?
+  finishedAt   DateTime?
+  errorCode    String?             @db.VarChar(120)
+  errorMessage String?             @db.VarChar(1000)
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+  patient      Patient?            @relation(fields: [patientId], references: [id], onDelete: SetNull)
+  report       PatientReport?      @relation(fields: [reportId], references: [id], onDelete: SetNull)
+  messageLog   MessageLog?         @relation(fields: [messageLogId], references: [id], onDelete: SetNull)
 
-  patient   Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  createdBy User?   @relation(fields: [createdById], references: [id], onDelete: SetNull)
-
-  @@index([patientId])
-  @@index([createdById])
-  @@index([source])
-  @@index([periodStart, periodEnd])
-  @@map("reports")
+  @@index([status, scheduledAt])
+  @@index([type, createdAt])
+  @@index([patientId, createdAt])
 }
 
-model Appointment {
-  id            String            @id @default(uuid()) @db.Uuid
-  patientId     String?           @db.Uuid
-  userId        String            @db.Uuid
-  title         String
-  description   String?
-  location      String?
-  startAt       DateTime
-  endAt         DateTime
-  status        AppointmentStatus @default(SCHEDULED)
-  googleEventId String?
-  createdAt     DateTime          @default(now())
-  updatedAt     DateTime          @updatedAt
-
-  patient Patient? @relation(fields: [patientId], references: [id], onDelete: SetNull)
-  user    User     @relation(fields: [userId], references: [id], onDelete: Restrict)
-
-  notifications Notification[]
-
-  @@index([patientId])
-  @@index([userId])
-  @@index([startAt])
-  @@index([status])
-  @@map("appointments")
+model SystemSetting {
+  id                       String   @id @default("global") @db.VarChar(40)
+  timezone                 String   @default("America/Sao_Paulo") @db.VarChar(80)
+  sendingWindowStart       String   @default("09:00") @db.VarChar(5)
+  sendingWindowEnd         String   @default("18:00") @db.VarChar(5)
+  messageAutomationEnabled Boolean  @default(false)
+  reportAutomationEnabled  Boolean  @default(false)
+  updatedById              String?  @db.Uuid
+  updatedAt                DateTime @updatedAt
+  updatedBy                User?    @relation("SettingUpdater", fields: [updatedById], references: [id], onDelete: SetNull)
 }
 
-model Notification {
-  id            String              @id @default(uuid()) @db.Uuid
-  userId        String              @db.Uuid
-  appointmentId String?             @db.Uuid
-  type          NotificationChannel
-  title         String
-  message       String
-  readAt        DateTime?
-  sentAt        DateTime?
-
-  createdAt DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  appointment Appointment? @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
-
-  @@index([userId])
-  @@index([appointmentId])
-  @@index([readAt])
-  @@index([sentAt])
-  @@map("notifications")
+model PortalSetting {
+  id         String         @id @default(uuid()) @db.Uuid
+  platform   ReportPlatform @unique
+  isEnabled  Boolean        @default(false)
+  lastRunAt  DateTime?
+  lastStatus String?        @db.VarChar(120)
+  updatedAt  DateTime       @updatedAt
 }
 
 model AuditLog {
-  id        String      @id @default(uuid()) @db.Uuid
-  userId    String?     @db.Uuid
-  action    AuditAction
-  entity    String
-  entityId  String?
-  metadata  Json?
-  createdAt DateTime    @default(now())
+  id         String   @id @default(uuid()) @db.Uuid
+  actorId    String?  @db.Uuid
+  patientId  String?  @db.Uuid
+  entityType String   @db.VarChar(100)
+  entityId   String   @db.VarChar(100)
+  action     String   @db.VarChar(100)
+  fields     String[] @default([])
+  createdAt  DateTime @default(now())
+  actor      User?    @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+  patient    Patient? @relation(fields: [patientId], references: [id], onDelete: SetNull)
 
-  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
-
-  @@index([userId])
-  @@index([entity, entityId])
-  @@index([createdAt])
-  @@map("audit_logs")
+  @@index([patientId, createdAt])
+  @@index([entityType, entityId, createdAt])
+  @@index([actorId, createdAt])
 }

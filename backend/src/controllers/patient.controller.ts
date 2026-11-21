@@ -1,47 +1,75 @@
-import { type Request, type Response, type NextFunction } from 'express';
-import * as service from '../services/patient.service'
+import { type NextFunction, type Request, type Response } from 'express';
+import * as service from '../services/patient.service';
+import { getRouteParam } from '../middlewares/validator.middleware';
 
-export async function getPatients(_req: Request, res: Response, next: NextFunction): Promise<void> {
+export async function list(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
   try {
-    const patients = await service.findAll();
-    res.json(patients);
-  } catch (e) {
-    next(e);
+    res.json(await service.list(req.query as never));
+  } catch (error) {
+    next(error);
   }
 }
 
-export async function getPatientById(req: Request, res: Response, next: NextFunction): Promise<void> {
+export async function get(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
   try {
-    const patient = await service.findById(String(req.params.id));
-    res.json(patient);
-  } catch (e) {
-    next(e)
+    res.json({ patient: await service.findById(getRouteParam(req, 'id')) });
+  } catch (error) {
+    next(error);
   }
 }
 
-export async function createPatient(req: Request, res: Response, next: NextFunction): Promise<void> {
+export async function create(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
   try {
-    const patient = await service.create(req.body);
-    res.status(201).json(patient);
-  } catch (e) {
-    next(e)
+    if (!req.auth) throw new Error('Authentication context is missing');
+    res
+      .status(201)
+      .json({ patient: await service.create(req.body, req.auth.userId) });
+  } catch (error) {
+    next(error);
   }
 }
 
-export async function updatePatient(req: Request, res: Response, next: NextFunction): Promise<void> {
+export async function update(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
   try {
-    const patient = await service.update(String(req.params.id), { ...req.body });
-    res.json(patient);
-  } catch (e) {
-    next(e)
+    if (!req.auth) throw new Error('Authentication context is missing');
+    res.json({
+      patient: await service.update(
+        getRouteParam(req, 'id'),
+        req.body,
+        req.auth.userId,
+      ),
+    });
+  } catch (error) {
+    next(error);
   }
 }
 
-export async function removePatient(req: Request, res: Response, next: NextFunction): Promise<void> {
+export async function deactivate(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
   try {
-    await service.remove(String(req.params.id));
+    if (!req.auth) throw new Error('Authentication context is missing');
+    await service.deactivate(getRouteParam(req, 'id'), req.auth.userId);
     res.status(204).end();
-  } catch (e) {
-    next(e)
+  } catch (error) {
+    next(error);
   }
 }

@@ -7,18 +7,18 @@ const adapter = new PrismaPg(pool);
 
 export const prisma: PrismaClient = new PrismaClient({
   adapter,
-  log:
-    process.env.NODE_ENV === 'development'
-      ? ['query', 'error', 'warn']
-      : ['error'],
+  log: process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error'],
 });
 
 export const connectDB = async () => {
   try {
     await prisma.$connect();
     console.log('DataBase connected via prisma');
-  } catch (e) {
-    console.log('Database connection error:', e);
+  } catch (error) {
+    console.error(
+      'Database connection failed:',
+      error instanceof Error ? error.name : 'UnknownError',
+    );
     process.exit(1);
   }
 };

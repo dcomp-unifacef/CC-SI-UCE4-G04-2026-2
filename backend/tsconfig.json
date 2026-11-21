@@ -14,5 +14,5 @@
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true
   },
-  "include": ["src/**/*", "prisma7.config.ts"]
+  "include": ["src/**/*", "prisma7.config.ts", "src/routes/.ts"]
 }

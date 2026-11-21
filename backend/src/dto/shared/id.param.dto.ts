@@ -1,6 +1,10 @@
-import { IsUUID } from 'class-validator';
+import { z } from 'zod';
+import { parseDto, uuidSchema } from './zod';
+
+export const idParamSchema = z.object({ id: uuidSchema }).strict();
 
 export class IdParamDto {
-  @IsUUID('4', { message: 'The id parameter must be a valid UUID v4.' })
-  id!: string;
+  static parse(value: unknown) {
+    return parseDto(idParamSchema, value);
+  }
 }

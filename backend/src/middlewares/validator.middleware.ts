@@ -1,31 +1,29 @@
-import { Request, Response, NextFunction } from 'express';
-import { plainToInstance } from 'class-transformer';
-import { validate } from 'class-validator';
+import { type NextFunction, type Request, type Response } from 'express';
 import { BadRequestError } from '../errors/BadRequestError';
 
 type ValidationTarget = 'body' | 'params' | 'query';
+type ParsableDto = { parse(input: unknown): unknown };
 
-export function validator(dtoClass: any, target: ValidationTarget) {
-  return async (req: Request, _res: Response, next: NextFunction) => {
+export function validator(dtoClass: ParsableDto, target: ValidationTarget) {
+  return (req: Request, _res: Response, next: NextFunction): void => {
     try {
-      const dtoInstance = plainToInstance(dtoClass, req[target]);
-      const errors = await validate(dtoInstance);
-
-      if (errors.length > 0) {
-        const formattedErrors = errors.map((err) => {
-          return {
-            field: err.property,
-            rule: Object.values(err.constraints || {}),
-          };
-        });
-
-        throw new BadRequestError(`Invalid request ${target}`, formattedErrors);
-      }
-
-      req[target] = dtoInstance;
+      const value = dtoClass.parse(req[target]);
+      Object.defineProperty(req, target, {
+        value,
+        configurable: true,
+        enumerable: true,
+        writable: true,
+      });
       next();
-    } catch (e) {
-      next(e);
+    } catch (error) {
+      next(error);
     }
   };
+}
+
+export function getRouteParam(req: Request, name: string): string {
+  const value = req.params[name];
+  if (typeof value !== 'string' || value.length === 0)
+    throw new BadRequestError(`Route parameter "${name}" is required`, []);
+  return value;
 }

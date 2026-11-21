@@ -2,42 +2,29 @@ import 'dotenv/config';
 import app from './app';
 import { connectDB, disconnectDB } from './db/prisma';
 
-const PORT = process.env.PORT || 3000;
+const port = Number(process.env.PORT ?? 3000);
 
 await connectDB();
 
-const server = app.listen(PORT, () => {
-  console.log(`Server listening on PORT ${PORT}...`);
+const server = app.listen(port, () => {
+  console.log(`Sono Inteligente API listening on port ${port}`);
 });
 
 server.on('error', (error: NodeJS.ErrnoException) => {
-  if (error.code === 'EADDRINUSE') {
-    console.error(`Port ${PORT} is already in use!`);
-  } else if (error.code === 'EACCES') {
-    console.error(`Port ${PORT} requires elevated privileges!`);
-  } else {
-    console.error('Failed to initialize the server:', error);
-  }
+  console.error('Failed to start the API server:', error.message);
+  process.exitCode = 1;
 });
 
-process.on('unhandledRejection', async (err) => {
-  console.error('Unhandled Rejection:', err);
-  server.close(async () => {
-    await disconnectDB();
-    process.exit(1);
-  });
-});
-
-process.on('uncaughtException', async (err) => {
-  console.error('Uncaught Exception:', err);
-  await disconnectDB();
-  process.exit(1);
-});
-
-process.on('SIGTERM', async () => {
-  console.log('SIGTERM received, shutting down gracefully');
+let shuttingDown = false;
+async function shutdown(signal: string): Promise<void> {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  console.log(`${signal} received; shutting down API`);
   server.close(async () => {
     await disconnectDB();
     process.exit(0);
   });
-});
+}
+
+process.on('SIGTERM', () => void shutdown('SIGTERM'));
+process.on('SIGINT', () => void shutdown('SIGINT'));
