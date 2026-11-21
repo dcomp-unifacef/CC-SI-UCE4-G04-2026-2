@@ -1,8 +1,10 @@
 import { useState, type SubmitEvent } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { AtSign, Lock } from "lucide-react";
 import Field from "../components/Field";
 import { useForm } from "../hooks/useForm";
+import { useAuth } from "../contexts/AuthContext";
+import { apiErrorMessage } from "../services/api";
 
 const loginForm = {
   email: "",
@@ -11,14 +13,28 @@ const loginForm = {
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { login } = useAuth();
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
   const { form, handleChange } = useForm(loginForm, () => setError(""));
 
-  function handleSubmit(e: SubmitEvent<HTMLFormElement>) {
+  async function handleSubmit(e: SubmitEvent<HTMLFormElement>) {
     e.preventDefault();
 
     setError("");
-    navigate("/inicio");
+    setLoading(true);
+
+    try {
+      await login(form.email, form.password);
+      const from = (location.state as { from?: { pathname: string } } | null)
+        ?.from?.pathname;
+      navigate(from ?? "/inicio", { replace: true });
+    } catch (err) {
+      setError(apiErrorMessage(err, "E-mail ou senha incorretos."));
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -71,9 +87,10 @@ export default function LoginPage() {
 
         <button
           type="submit"
+          disabled={loading}
           className="flex justify-center items-center gap-2 bg-primary text-primary-foreground text-sm font-semibold uppercase rounded-md py-2 px-4 mt-2 hover:brightness-150 transition-colors"
         >
-          Entrar
+          {loading ? "Entrando..." : "Entrar"}
         </button>
 
         <p className="mt-2 text-sm text-center text-muted">

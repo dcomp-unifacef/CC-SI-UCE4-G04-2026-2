@@ -3,6 +3,8 @@ import { User, AtSign, Lock, ShieldCheck } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import Field from "../components/Field";
 import { useForm } from "../hooks/useForm";
+import { useAuth } from "../contexts/AuthContext";
+import { apiErrorMessage } from "../services/api";
 
 const registerForm = {
   name: "",
@@ -13,14 +15,20 @@ const registerForm = {
 
 export default function RegisterPage() {
   const navigate = useNavigate();
+  const { register } = useAuth();
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
   const { form, handleChange } = useForm(registerForm, () => setError(""));
 
-  function handleSubmit(e: SubmitEvent<HTMLFormElement>) {
+  async function handleSubmit(e: SubmitEvent<HTMLFormElement>) {
     e.preventDefault();
 
-    if (form.password.length < 8) {
-      setError("A senha deve ter pelo menos 8 caracteres.");
+    if (
+      form.password.length < 12 ||
+      !/[A-Za-z]/.test(form.password) ||
+      !/\d/.test(form.password)
+    ) {
+      setError("A senha deve ter 12 caracteres, com letras e números.");
       return;
     }
 
@@ -30,7 +38,21 @@ export default function RegisterPage() {
     }
 
     setError("");
-    navigate("/inicio");
+    setLoading(true);
+
+    try {
+      await register(form);
+      navigate("/inicio", { replace: true });
+    } catch (err) {
+      setError(
+        apiErrorMessage(
+          err,
+          "O cadastro está fechado. Peça a um administrador para criar sua conta.",
+        ),
+      );
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -99,9 +121,10 @@ export default function RegisterPage() {
 
         <button
           type="submit"
+          disabled={loading}
           className="flex justify-center items-center gap-2 bg-primary text-primary-foreground text-sm font-semibold uppercase rounded-md py-2 px-4 mt-2 hover:brightness-150 transition-colors"
         >
-          Criar Conta
+          {loading ? "Criando..." : "Criar Conta"}
         </button>
 
         <p className="mt-2 text-sm text-center text-muted">
