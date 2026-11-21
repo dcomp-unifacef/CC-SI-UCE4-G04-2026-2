@@ -1,0 +1,13 @@
+# vps e infra
+/docs
+/vps_config
+
+# Assets
+/design
+/photoshop_assets
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
