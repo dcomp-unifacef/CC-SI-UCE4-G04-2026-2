@@ -25,7 +25,7 @@ export default function PatientsTable({
 
   return (
     <section
-      className="bg-surface rounded-lg overflow-hidden text-card-foreground"
+      className="bg-surface rounded-lg overflow-hidden text-card-foreground px-5"
       aria-label="Lista de pacientes"
     >
       <table className="w-full border-collapse text-left text-xs max-[800px]:block">

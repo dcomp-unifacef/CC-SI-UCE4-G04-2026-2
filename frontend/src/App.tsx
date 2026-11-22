@@ -16,6 +16,9 @@ import MessagesListPage from "./pages/MessagesListPage";
 import WhatsAppReconnect from "./pages/WhatsAppReconnect";
 import MessageTemplateForm from "./pages/MessageTemplateForm";
 import MessageDetails from "./pages/MessageDetails";
+import ReportsListPage from "./pages/ReportsListPage";
+import ReportDetailsPage from "./pages/ReportDetailsPage";
+import ReportSendPage from "./pages/ReportSendPage";
 
 function App() {
   return (
@@ -41,6 +44,10 @@ function App() {
           <Route path="/mensagens/reconectar" element={<WhatsAppReconnect />} />
           <Route path="/mensagens/modelos/:id/editar" element={<MessageTemplateForm />} />
           <Route path="/mensagens/:id" element={<MessageDetails />} />
+
+          <Route path="/relatorios" element={<ReportsListPage />} />
+          <Route path="/relatorios/:id" element={<ReportDetailsPage />} />
+          <Route path="/relatorios/:id/enviar" element={<ReportSendPage />} />
         </Route>
       </Route>
 

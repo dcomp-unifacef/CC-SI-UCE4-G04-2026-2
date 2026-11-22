@@ -155,7 +155,7 @@ export default function MessagesListPage() {
         </select>
       </div>
 
-      <section aria-label="Lista de mensagens" className="overflow-hidden rounded-xl bg-surface text-card-foreground">
+      <section aria-label="Lista de mensagens" className="overflow-hidden rounded-xl bg-surface text-card-foreground px-5">
         <div className="overflow-x-auto">
           <table className="w-full min-w-160 border-collapse text-left text-sm">
             <thead className="h-13 text-sm text-primary">
