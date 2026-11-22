@@ -53,6 +53,28 @@ export const reportPlatformLabels: Record<string, string> = {
   MANUAL: "Manual",
 };
 
+export const jobTypeLabels: Record<string, string> = {
+  MESSAGE_SEND: "Lembretes WhatsApp",
+  REPORT_IMPORT: "Importação de relatório",
+  REPORT_PROCESS: "Processamento de relatório",
+  REPORT_SEND: "Envio de relatório",
+  PORTAL_SYNC: "Sincronização de portal",
+};
+
+export const jobStatusLabels: Record<string, [string, StatusColor]> = {
+  QUEUED: ["Na fila", "warning"],
+  RUNNING: ["Em execução", "warning"],
+  SUCCEEDED: ["Concluída", "success"],
+  FAILED: ["Falhou", "danger"],
+  CANCELLED: ["Cancelada", "danger"],
+};
+
+export const portalLabels: Record<string, string> = {
+  AIRVIEW: "AirView · ResMed",
+  CARE_ORCHESTRATOR: "Care Orchestrator · Philips",
+  SMART_LIVE: "Smart Live",
+};
+
 export const auditEntityLabels: Record<string, [string, string]> = {
   Patient: ["Paciente", "/pacientes"],
   PatientDocument: ["Documento do paciente", "/pacientes"],

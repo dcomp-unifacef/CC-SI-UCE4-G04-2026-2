@@ -20,14 +20,14 @@ const titles: [string, string][] = [
   ["/mensagens/reconectar", "Mensagens / Reconectar WhatsApp"],
   ["/mensagens/modelos/:id/editar", "Mensagens / Modelos / Editar"],
   ["/mensagens/:id", "Detalhe do envio"],
-  ["/mensagens", "Mensagens — fila e conexão"],
+  ["/mensagens", "Mensagens - fila e conexão"],
   ["/relatorios/:id/enviar", "Relatórios / Preparar envio"],
   ["/relatorios/:id", "Relatório de acompanhamento"],
-  ["/relatorios", "Relatórios — revisão e importação"],
+  ["/relatorios", "Relatórios - revisão e importação"],
   ["/automacoes/:id", "Automações / Execução"],
-  ["/automacoes", "Automações — monitoramento"],
+  ["/automacoes", "Automações - monitoramento"],
   ["/configuracoes/lembretes", "Configurações / Lembretes"],
-  ["/configuracoes", "Configurações — geral"],
+  ["/configuracoes", "Configurações - geral"],
 ];
 
 export default function AppLayout() {
