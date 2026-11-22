@@ -13,6 +13,7 @@ import {
   auditEntityLabels,
   badgeClasses,
   filterTypeLabels,
+  formatFileSize,
   formatDate,
   formatRelativeDate,
   messageCategoryLabels,
@@ -24,11 +25,6 @@ type LoadState =
   | { status: "notFound" }
   | { status: "error" }
   | { status: "ready"; patient: PatientDetails };
-
-function formatSize(bytes: number) {
-  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1).replace(".", ",")} MB`;
-}
 
 const tabs = [
   "Visão geral",
@@ -260,7 +256,7 @@ function PatientDetailsView({ id }: { id: string }) {
                     {latestDocument.originalName}
                   </p>
                   <p className="mt-1 text-sm text-muted">
-                    PDF · {formatSize(latestDocument.sizeBytes)} ·{" "}
+                    PDF · {formatFileSize(latestDocument.sizeBytes)} ·{" "}
                     {formatDate(latestDocument.createdAt)}
                   </p>
                   {documentError && (

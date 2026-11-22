@@ -1,34 +1,110 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { isAxiosError } from "axios";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { FileText } from "lucide-react";
-import { reports } from "../data/reports";
+import { apiErrorMessage } from "../services/api";
+import { createMessage } from "../services/messages";
+import {
+  fetchReport,
+  metricNumber,
+  metricText,
+  type Report,
+} from "../services/reports";
+import {
+  formatFileSize,
+  formatMonthLong,
+  formatPeriod,
+  formatPhone,
+  reportPlatformLabels,
+} from "../utils/labels";
 
-export default function ReportSendPage() {
-  const { id } = useParams();
+type LoadState =
+  | { status: "loading" }
+  | { status: "notFound" }
+  | { status: "error" }
+  | { status: "ready"; report: Report };
+
+function buildMessage(report: Report) {
+  const firstName = report.patient?.fullName.split(" ")[0] ?? "";
+  const month = report.periodStart ? formatMonthLong(report.periodStart) : "";
+  const daysUsed = metricNumber(report, "days_used");
+  const average = metricText(report, "average_daily_usage");
+  const usage =
+    daysUsed !== null && average
+      ? `No período, foram registrados ${String(daysUsed).replace(".", ",")} dias de uso, com média diária de ${average}. `
+      : "";
+  return (
+    `Olá, ${firstName}! 😊\n\n` +
+    `Segue seu relatório mensal de acompanhamento${month ? ` referente a ${month}` : ""}.\n\n` +
+    `${usage}O documento em PDF está anexado para você consultar.\n\n` +
+    `Se tiver dúvidas, estamos à disposição.\nSono Inteligente`
+  );
+}
+
+function ReportSendView({ id }: { id: string }) {
   const navigate = useNavigate();
+  const [state, setState] = useState<LoadState>({ status: "loading" });
   const [confirmed, setConfirmed] = useState(false);
-  const report = reports.find((r) => r.id === Number(id));
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState("");
 
-  if (!report) {
+  const load = useCallback(
+    () =>
+      fetchReport(id)
+        .then((report) => setState({ status: "ready", report }))
+        .catch((err) => {
+          const notFound =
+            isAxiosError(err) &&
+            (err.response?.status === 404 || err.response?.status === 400);
+          setState({ status: notFound ? "notFound" : "error" });
+        }),
+    [id],
+  );
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  if (state.status === "loading") {
+    return <p className="text-muted">Carregando...</p>;
+  }
+
+  if (state.status !== "ready") {
     return (
       <p className="text-muted">
-        Relatório não encontrado. <Link className="text-link" to="/relatorios">Voltar para a lista</Link>
+        {state.status === "notFound"
+          ? "Relatório não encontrado."
+          : "Não foi possível carregar o relatório."}{" "}
+        <Link className="text-link" to="/relatorios">Voltar para a lista</Link>
       </p>
     );
   }
 
-  const firstName = report.patient.split(" ")[0];
-  const pdfName = `Relatório_${report.periodLabel.slice(0, 3)}_2026.pdf`;
-  const message =
-    `Olá, ${firstName}! 😊\n\n` +
-    `Segue seu relatório mensal de acompanhamento referente a ${report.month}.\n\n` +
-    `No período, foram registrados ${report.daysUsed} dias de uso, com média diária de ${report.avgDaily}. ` +
-    `O documento em PDF está anexado para você consultar.\n\n` +
-    `Se tiver dúvidas, estamos à disposição.\nSono Inteligente`;
+  const { report } = state;
+  const patient = report.patient;
+  const approved = report.status === "APPROVED" && patient !== null;
+  const message = buildMessage(report);
 
-  function send() {
-    // TODO: enviar a mensagem e o PDF pela API do WhatsApp (e registrar no histórico do paciente)
-    navigate("/relatorios");
+  async function send() {
+    if (!patient) return;
+    setSending(true);
+    setError("");
+    try {
+      const created = await createMessage({
+        patientId: patient.id,
+        category: "MONTHLY_REPORT",
+        reportId: report.id,
+        content: message,
+      });
+      navigate(`/mensagens/${created.id}`);
+    } catch (err) {
+      setError(
+        isAxiosError(err) && err.response?.status === 409
+          ? "Não foi possível agendar o envio. Verifique se o paciente está ativo e autorizou mensagens no WhatsApp."
+          : apiErrorMessage(err, "Não foi possível agendar o envio."),
+      );
+      setSending(false);
+    }
   }
 
   return (
@@ -46,15 +122,15 @@ export default function ReportSendPage() {
         <div className="grid content-start gap-5">
           <section className="rounded-[13px] bg-surface p-6 text-card-foreground">
             <p className="text-xs font-semibold text-muted uppercase">Destinatário</p>
-            <h3 className="mt-1 text-xl font-semibold">{report.patient}</h3>
-            <p className="text-sm text-muted">{report.phone} · WhatsApp autorizado</p>
+            <h3 className="mt-1 text-xl font-semibold">{patient?.fullName ?? "Paciente não associado"}</h3>
+            <p className="text-sm text-muted">{patient ? formatPhone(patient.phone) : "-"}</p>
           </section>
 
           <section className={"rounded-[13px] bg-surface p-6 text-card-foreground flex items-start gap-4"}>
             <span className="rounded-lg bg-danger-bg px-2.5 py-3 text-[11px] font-bold text-danger-fg">PDF</span>
             <div>
               <h3 className="text-lg font-semibold">Relatório de acompanhamento</h3>
-              <p className="text-sm text-muted">{report.periodLabel} · {report.platform} · {report.size}</p>
+              <p className="text-sm text-muted">{formatPeriod(report.periodStart, report.periodEnd)} · {reportPlatformLabels[report.platform]} · {formatFileSize(report.sizeBytes)}</p>
               <Link to={`/relatorios/${report.id}`} className="mt-1 inline-block text-sm font-semibold text-link">
                 Ver documento →
               </Link>
@@ -72,6 +148,14 @@ export default function ReportSendPage() {
               Confirmo paciente, período e documento anexado.
             </label>
             <p className="mt-3 text-sm text-muted">Envio registrado no histórico do paciente após confirmação.</p>
+            {!approved && (
+              <p role="status" className="mt-3 text-sm text-warning-fg">
+                Aprove o relatório na revisão antes de preparar o envio.
+              </p>
+            )}
+            {error && (
+              <p role="alert" className="mt-3 text-sm text-danger-fg">{error}</p>
+            )}
           </div>
 
           <div className="flex flex-wrap justify-between gap-3">
@@ -84,11 +168,11 @@ export default function ReportSendPage() {
 
             <button
               type="button"
-              disabled={!confirmed}
+              disabled={!confirmed || !approved || sending}
               onClick={send}
               className="inline-flex min-h-11 cursor-pointer items-center rounded-lg bg-primary px-6 py-2.5 text-sm text-primary-foreground disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-[3px] focus-visible:outline-link"
             >
-              Enviar pelo WhatsApp
+              {sending ? "Enviando..." : "Enviar pelo WhatsApp"}
             </button>
           </div>
 
@@ -103,13 +187,12 @@ export default function ReportSendPage() {
         <section className="rounded-[13px] bg-surface p-6 text-card-foreground">
           <h3 className="mb-5 text-xl font-semibold">WhatsApp · Prévia</h3>
 
-          {/* Cores fixas para imitar o WhatsApp nos dois temas */}
           <div className="rounded-2xl bg-[#e6efe6] p-6 text-[#17384a]">
             <div className="rounded-2xl bg-[#dcf5d4] p-5">
               <p className="text-[15px] leading-6 whitespace-pre-line">{message}</p>
 
               <div className="mt-4 flex items-center gap-2 rounded-lg bg-white px-4 py-3 text-sm font-semibold text-brand-500">
-                <FileText size={16} /> {pdfName}
+                <FileText size={16} /> {report.originalName}
               </div>
             </div>
           </div>
@@ -119,4 +202,9 @@ export default function ReportSendPage() {
       </div>
     </>
   );
+}
+export default function ReportSendPage() {
+  const { id } = useParams();
+  if (!id) return null;
+  return <ReportSendView key={id} id={id} />;
 }

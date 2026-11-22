@@ -1,27 +1,33 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Check, Search } from "lucide-react";
-import { messages as initialMessages } from "../data/messages";
-import type { Message, MessageStatus } from "../data/messages";
+import { Check, Search, TriangleAlert, X } from "lucide-react";
+import { apiErrorMessage } from "../services/api";
+import {
+  fetchMessages,
+  fetchWhatsappStatus,
+  retryMessage,
+  type Message,
+  type WhatsappStatus,
+} from "../services/messages";
 import { daysFromToday, formatSendTime } from "../utils/formatDate";
+import {
+  badgeClasses,
+  messageCategoryLabels,
+  messageStatusLabels,
+} from "../utils/labels";
 
 type Group = "all" | "scheduled" | "sent" | "failed";
 
-// Os cards de resumo e o select "Status" usam o mesmo estado
-const groups: Record<Group, { label: string; statuses?: MessageStatus[] }> = {
+const groups: Record<Group, { label: string; statuses?: string[] }> = {
   all: { label: "Todas" },
-  scheduled: { label: "Agendadas", statuses: ["scheduled", "waiting"] },
-  sent: { label: "Enviadas", statuses: ["sent"] },
-  failed: { label: "Falhas", statuses: ["failed"] },
+  scheduled: {
+    label: "Agendadas",
+    statuses: ["SCHEDULED", "PENDING", "PROCESSING"],
+  },
+  sent: { label: "Enviadas", statuses: ["SENT", "DELIVERED"] },
+  failed: { label: "Falhas", statuses: ["FAILED"] },
 };
 const groupKeys = Object.keys(groups) as Group[];
-
-const badge: Record<MessageStatus, { label: string; className: string }> = {
-  scheduled: { label: "Agendada", className: "bg-warning-bg text-warning-fg" },
-  waiting: { label: "Aguardando", className: "bg-warning-bg text-warning-fg" },
-  sent: { label: "Enviada", className: "bg-success-bg text-success-fg" },
-  failed: { label: "Falhou", className: "bg-danger-bg text-danger-fg" },
-};
 
 const inGroup = (m: Message, group: Group) => {
   const statuses = groups[group].statuses;
@@ -30,26 +36,132 @@ const inGroup = (m: Message, group: Group) => {
 
 const normalize = (text: string) => text.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
 
+type ListState =
+  | { status: "loading" }
+  | { status: "error" }
+  | { status: "ready"; messages: Message[] };
+
+type ConnectionState =
+  | { status: "loading" }
+  | { status: "error" }
+  | { status: "ready"; connection: WhatsappStatus };
+
+function ConnectionCard() {
+  const [state, setState] = useState<ConnectionState>({ status: "loading" });
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchWhatsappStatus()
+      .then((connection) => {
+        if (!cancelled) setState({ status: "ready", connection });
+      })
+      .catch(() => {
+        if (!cancelled) setState({ status: "error" });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  let tone = "bg-warning-bg text-warning-fg";
+  let icon = <TriangleAlert size={22} />;
+  let title = "Verificando conexão do WhatsApp...";
+  let detail = "Aguarde um instante.";
+  let canReconnect = false;
+
+  if (state.status === "error") {
+    title = "Não foi possível verificar a conexão do WhatsApp";
+    detail = "Tente novamente em instantes.";
+  } else if (state.status === "ready") {
+    const { connection } = state;
+    if (!connection.enabled) {
+      title = "Integração do WhatsApp desativada";
+      detail = "Os envios automáticos não estão habilitados neste ambiente.";
+    } else if (connection.connected) {
+      tone = "bg-success-bg text-success-fg";
+      icon = <Check size={22} />;
+      title = "WhatsApp Business conectado";
+      detail = "Conexão ativa";
+      canReconnect = true;
+    } else {
+      tone = "bg-danger-bg text-danger-fg";
+      icon = <X size={22} />;
+      title = "WhatsApp Business desconectado";
+      detail = "Reconecte para retomar os envios automáticos.";
+      canReconnect = true;
+    }
+  }
+
+  return (
+    <section
+      aria-label="Conexão do WhatsApp"
+      className="mb-8 flex items-center gap-4 rounded-[13px] bg-surface p-5 text-card-foreground"
+    >
+      <span className={`grid size-12 shrink-0 place-items-center rounded-full ${tone}`}>
+        {icon}
+      </span>
+      <div className="min-w-0 flex-1">
+        <h3 className="text-lg font-semibold">{title}</h3>
+        <p className="text-sm text-muted">{detail}</p>
+      </div>
+      {canReconnect && (
+        <Link
+          to="/mensagens/reconectar"
+          className="px-4 text-base font-semibold text-link focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-link"
+        >
+          Reconectar
+        </Link>
+      )}
+    </section>
+  );
+}
+
 export default function MessagesListPage() {
-  const [messages, setMessages] = useState(initialMessages);
+  const [state, setState] = useState<ListState>({ status: "loading" });
   const [search, setSearch] = useState("");
   const [type, setType] = useState("");
   const [group, setGroup] = useState<Group>("all");
   const [period, setPeriod] = useState("");
+  const [retryError, setRetryError] = useState("");
 
-  const types = [...new Set(messages.map((m) => m.type))];
+  const load = useCallback(
+    () =>
+      fetchMessages()
+        .then((messages) => setState({ status: "ready", messages }))
+        .catch(() => setState({ status: "error" })),
+    [],
+  );
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const messages = state.status === "ready" ? state.messages : [];
+  const types = [...new Set(messages.map((m) => m.category))];
 
   const visible = messages.filter(
     (m) =>
-      normalize(`${m.patient} ${m.title}`).includes(normalize(search.trim())) &&
-      (!type || m.type === type) &&
+      normalize(`${m.patient.fullName} ${messageCategoryLabels[m.category]}`).includes(
+        normalize(search.trim()),
+      ) &&
+      (!type || m.category === type) &&
       inGroup(m, group) &&
-      (!period || daysFromToday(m.scheduledAt) <= Number(period)),
+      (!period || daysFromToday(m.scheduledAt ?? m.createdAt) <= Number(period)),
   );
 
-  function retry(id: number) {
-    // TODO: pedir o reenvio à API
-    setMessages((prev) => prev.map((m) => (m.id === id ? { ...m, status: "waiting" } : m)));
+  async function retry(id: string) {
+    setRetryError("");
+    try {
+      await retryMessage(id);
+      await load();
+    } catch (err) {
+      setRetryError(
+        apiErrorMessage(
+          err,
+          "Não foi possível reenviar. Verifique se o paciente está ativo e autorizou o WhatsApp.",
+        ),
+      );
+    }
   }
 
   return (
@@ -63,29 +175,7 @@ export default function MessagesListPage() {
         </p>
       </header>
 
-      {/* TODO: status real da conexão vindo da API */}
-      <section
-        aria-label="Conexão do WhatsApp"
-        className="mb-8 flex items-center gap-4 rounded-[13px] bg-surface p-5 text-card-foreground"
-      >
-        <span className="grid size-12 shrink-0 place-items-center rounded-full bg-success-bg text-success-fg">
-          <Check size={22} />
-        </span>
-        <div className="min-w-0 flex-1">
-          <h3 className="text-lg font-semibold">
-            WhatsApp Business conectado
-          </h3>
-          <p className="text-sm text-muted">
-            Instância sono-inteligente · Conectado agora
-          </p>
-        </div>
-        <Link
-          to="/mensagens/reconectar"
-          className="px-4 text-base font-semibold text-link focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-link"
-        >
-          Reconectar
-        </Link>
-      </section>
+      <ConnectionCard />
 
       <h3 className="mb-3 text-2xl font-semibold text-foreground">
         Mensagens
@@ -127,7 +217,9 @@ export default function MessagesListPage() {
             className="h-12 cursor-pointer rounded-lg bg-background px-3 text-base text-muted focus-visible:outline-2 focus-visible:outline-link" 
         >
           <option value="">Tipo</option>
-          {types.map((t) => <option key={t}>{t}</option>)}
+          {types.map((t) => (
+            <option key={t} value={t}>{messageCategoryLabels[t]}</option>
+          ))}
         </select>
 
         <select
@@ -155,6 +247,12 @@ export default function MessagesListPage() {
         </select>
       </div>
 
+      {retryError && (
+        <p role="alert" className="mb-4 text-sm text-danger-fg">
+          {retryError}
+        </p>
+      )}
+
       <section aria-label="Lista de mensagens" className="overflow-hidden rounded-xl bg-surface text-card-foreground px-5">
         <div className="overflow-x-auto">
           <table className="w-full min-w-160 border-collapse text-left text-sm">
@@ -169,41 +267,66 @@ export default function MessagesListPage() {
             </thead>
 
             <tbody>
-              {visible.map((m) => (
-                <tr key={m.id} className="border-t border-border">
-                  <td className="px-4 py-3">
-                    <Link
-                      to={`/mensagens/${m.id}`}
-                      className="font-semibold hover:text-link focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-link"
-                    >
-                      {m.patient}
-                    </Link>
-                  </td>
-                  <td className="px-4 py-3">{m.title}</td>
-                  <td className="px-4 py-3 text-muted">{formatSendTime(m.scheduledAt)}</td>
-                  <td className="px-4 py-4">
-                    <span className={`inline-block min-w-26 rounded-full px-3 py-1.5 text-center ${badge[m.status].className}`}>
-                      {badge[m.status].label}
-                    </span>
-                  </td>
-                  <td className={"px-4 py-3 text-right"}>
-                    {m.status === "failed" && (
-                      <button
-                        type="button"
-                        onClick={() => retry(m.id)}
-                        className="cursor-pointer font-semibold text-danger-fg"
+              {visible.map((m) => {
+                const [statusLabel, statusColor] = messageStatusLabels[m.status];
+                return (
+                  <tr key={m.id} className="border-t border-border">
+                    <td className="px-4 py-3">
+                      <Link
+                        to={`/mensagens/${m.id}`}
+                        className="font-semibold hover:text-link focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-link"
                       >
-                        Tentar novamente
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
+                        {m.patient.fullName}
+                      </Link>
+                    </td>
+                    <td className="px-4 py-3">{messageCategoryLabels[m.category]}</td>
+                    <td className="px-4 py-3 text-muted">{formatSendTime(m.scheduledAt ?? m.createdAt)}</td>
+                    <td className="px-4 py-4">
+                      <span className={`inline-block min-w-26 rounded-full px-3 py-1.5 text-center ${badgeClasses[statusColor]}`}>
+                        {statusLabel}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      {m.status === "FAILED" && (
+                        <button
+                          type="button"
+                          onClick={() => retry(m.id)}
+                          className="cursor-pointer font-semibold text-danger-fg"
+                        >
+                          Tentar novamente
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
 
-        {visible.length === 0 && (
+        {state.status === "loading" && (
+          <p role="status" className="p-10 text-center text-muted">
+            Carregando mensagens...
+          </p>
+        )}
+
+        {state.status === "error" && (
+          <p role="alert" className="p-10 text-center text-danger-fg">
+            Não foi possível carregar as mensagens.{" "}
+            <button
+              type="button"
+              className="cursor-pointer font-semibold underline"
+              onClick={() => {
+                setState({ status: "loading" });
+                load();
+              }}
+            >
+              Tentar novamente
+            </button>
+          </p>
+        )}
+
+        {state.status === "ready" && visible.length === 0 && (
           <p role="status" className="p-10 text-center text-muted">
             Nenhuma mensagem encontrada. Tente outra busca ou limpe os filtros.
           </p>

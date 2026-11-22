@@ -20,8 +20,8 @@ export const filterTypeLabels: Record<string, string> = {
 
 export const messageCategoryLabels: Record<string, string> = {
   FILTER_WASH: "Higienização do filtro",
-  FILTER_REPLACE_DISPOSABLE: "Troca de filtro",
-  FILTER_REPLACE_WASHABLE: "Troca de filtro",
+  FILTER_REPLACE_DISPOSABLE: "Troca de filtro descartável",
+  FILTER_REPLACE_WASHABLE: "Troca de filtro lavável",
   ANNUAL_MAINTENANCE: "Manutenção anual",
   MONTHLY_REPORT: "Relatório mensal",
   CUSTOM: "Mensagem personalizada",
@@ -99,6 +99,53 @@ const dateFormat = new Intl.DateTimeFormat("pt-BR", { timeZone: "UTC" });
 
 export function formatDate(iso: string | null) {
   return iso ? dateFormat.format(new Date(iso)) : "-";
+}
+
+const monthShortFormat = new Intl.DateTimeFormat("pt-BR", {
+  month: "short",
+  timeZone: "UTC",
+});
+
+const monthLongFormat = new Intl.DateTimeFormat("pt-BR", {
+  month: "long",
+  timeZone: "UTC",
+});
+
+export function formatMonthShort(iso: string) {
+  const text = monthShortFormat.format(new Date(iso)).replace(".", "");
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+export function formatMonthLong(iso: string) {
+  return monthLongFormat.format(new Date(iso));
+}
+
+export function formatPeriod(start: string | null, end: string | null) {
+  if (!start || !end) return "não informado";
+  return `${formatDate(start)} a ${formatDate(end)}`;
+}
+
+export function daysInPeriod(start: string | null, end: string | null) {
+  if (!start || !end) return null;
+  const diff = new Date(end).getTime() - new Date(start).getTime();
+  return Math.round(diff / 86400000) + 1;
+}
+
+export function formatFileSize(bytes: number) {
+  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1).replace(".", ",")} MB`;
+}
+
+export function formatPhone(value: string) {
+  let digits = value.replace(/\D/g, "");
+  if (digits.length > 11 && digits.startsWith("55")) digits = digits.slice(2);
+  if (digits.length === 11) {
+    return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+  }
+  if (digits.length === 10) {
+    return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+  }
+  return value;
 }
 
 function isSameDay(a: Date, b: Date) {
