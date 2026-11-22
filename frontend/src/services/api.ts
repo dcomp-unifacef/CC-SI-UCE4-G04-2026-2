@@ -90,3 +90,10 @@ export function apiErrorMessage(error: unknown, fallback: string): string {
 
   return fallback;
 }
+
+export function apiInvalidFields(error: unknown): string[] {
+  if (!isAxiosError(error) || error.response?.status !== 400) return [];
+  const details = error.response.data?.details;
+  if (!Array.isArray(details)) return [];
+  return details.map((item: { field?: string }) => item.field ?? "");
+}

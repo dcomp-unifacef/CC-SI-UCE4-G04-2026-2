@@ -7,7 +7,7 @@ type Props = Omit<InputHTMLAttributes<HTMLInputElement>, "id"> & {
   label: string;
   icon?: ReactNode;
   extra?: ReactNode;
-  options?: string[];
+  options?: (string | { value: string; label: string })[];
   uppercase?: boolean;
   className?: string;
 };
@@ -51,7 +51,15 @@ export default function Field({
             {...(props as unknown as SelectHTMLAttributes<HTMLSelectElement>)}
           >
             <option value="" disabled>Selecionar</option>
-            {options.map((o) => <option key={o}>{o}</option>)}
+            {options.map((o) =>
+              typeof o === "string" ? (
+                <option key={o}>{o}</option>
+              ) : (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ),
+            )}
           </select>
         ) : (
           <input

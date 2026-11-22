@@ -7,13 +7,15 @@ export default function PatientsListPage() {
   const {
     filters,
     hasFilters,
-    CpapModels,
+    cpapModels,
     total,
-    viewable,
+    patients,
+    loadStatus,
     page,
     setPage,
     updateFilter,
     clearFilters,
+    reload,
   } = usePatients();
 
   return (
@@ -39,15 +41,32 @@ export default function PatientsListPage() {
 
       <PatientsFilter
         filters={filters}
-        CpapModels={CpapModels}
+        cpapModels={cpapModels}
         hasFilters={hasFilters}
         onFilterChange={updateFilter}
         onClear={clearFilters}
       />
 
+      {loadStatus === "error" && (
+        <div
+          role="alert"
+          className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-lg bg-danger-bg px-5 py-4 text-danger-fg"
+        >
+          <span>Não foi possível carregar os pacientes.</span>
+          <button
+            type="button"
+            onClick={reload}
+            className="cursor-pointer font-semibold underline"
+          >
+            Tentar novamente
+          </button>
+        </div>
+      )}
+
       <PatientsTable
-        patients={viewable}
+        patients={patients}
         total={total}
+        loading={loadStatus === "loading"}
         page={page}
         onPage={setPage}
       />

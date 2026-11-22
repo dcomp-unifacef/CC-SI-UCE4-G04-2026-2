@@ -1,17 +1,21 @@
 import { Link } from "react-router-dom";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { PER_PAGE, type Patient } from "../hooks/usePatients";
+import { PER_PAGE } from "../hooks/usePatients";
+import type { Patient } from "../services/patients";
+import { badgeClasses, patientStatusLabels } from "../utils/labels";
 
 type Props = {
   patients: Patient[];
   page: number;
   total: number;
+  loading: boolean;
   onPage: (page: number) => void;
 };
 
 export default function PatientsTable({
   patients,
   total,
+  loading,
   page,
   onPage,
 }: Props) {
@@ -37,40 +41,51 @@ export default function PatientsTable({
         </thead>
 
         <tbody className="max-[800px]:block">
-          {patients.map((p) => (
-            <tr key={p.id}>
-              <td className="px-4 py-3">
-                <Link
-                  to={`/pacientes/${p.id}`}
-                  className="block text-sm font-semibold hover:text-link focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-link"
-                >
-                  {p.nome}
-                </Link>
-                <small className="mt-1 block text-[11px] text-muted">
-                  WhatsApp verificado
-                </small>
-              </td>
-              <td className="px-4 py-3">{p.idade} anos</td>
-              <td className="px-4 py-3">{p.cpap} · {p.serie}</td>
-              <td className="px-4 py-3">{p.mascara}</td>
-              <td className="px-4 py-3">{p.medico}</td>
-              <td className="px-4 py-3">
-                <span
-                  className={`inline-block min-w-23 rounded-md px-2 py-1 ${
-                    p.status === "Pausado"
-                      ? "bg-warning-bg text-warning-fg"
-                      : "bg-success-bg text-success-fg"
-                  }`}
-                >
-                  {p.status}
-                </span>
-              </td>
-            </tr>
-          ))}
+          {patients.map((p) => {
+            const [statusLabel, statusColor] = patientStatusLabels[p.status];
+            return (
+              <tr key={p.id}>
+                <td className="px-4 py-3">
+                  <Link
+                    to={`/pacientes/${p.id}`}
+                    className="block text-sm font-semibold hover:text-link focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-link"
+                  >
+                    {p.fullName}
+                  </Link>
+                  <small className="mt-1 block text-[11px] text-muted">
+                    {p.whatsappOptIn
+                      ? "WhatsApp autorizado"
+                      : "WhatsApp não autorizado"}
+                  </small>
+                </td>
+                <td className="px-4 py-3">
+                  {p.age === null ? "-" : `${p.age} anos`}
+                </td>
+                <td className="px-4 py-3">
+                  {p.cpapModelName ?? "-"} · {p.cpapSerialNumber ?? "-"}
+                </td>
+                <td className="px-4 py-3">{p.maskModel ?? "-"}</td>
+                <td className="px-4 py-3">{p.physicianName ?? "-"}</td>
+                <td className="px-4 py-3">
+                  <span
+                    className={`inline-block min-w-23 rounded-md px-2 py-1 ${badgeClasses[statusColor]}`}
+                  >
+                    {statusLabel}
+                  </span>
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
 
-      {patients.length === 0 && (
+      {loading && patients.length === 0 && (
+        <p className="text-center p-10 text-muted" role="status">
+          Carregando pacientes...
+        </p>
+      )}
+
+      {!loading && patients.length === 0 && (
         <p className="text-center p-10 text-muted" role="status">
           Nenhum paciente encontrado. Tente outra busca ou limpe os filtros.
         </p>

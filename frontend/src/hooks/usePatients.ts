@@ -1,59 +1,106 @@
-import { useState } from "react";
-import { listaPacientes } from "../data/listaPacientes";
+import { useCallback, useEffect, useState } from "react";
+import {
+  fetchCpapModels,
+  fetchPatients,
+  type CpapModel,
+  type Patient,
+  type PatientStatus,
+} from "../services/patients";
 
-export type Patient = (typeof listaPacientes)[number];
-export type NewPatient = Omit<Patient, "id" | "status">;
-export type Filters = { search: string; cpap: string; status: string };
+export type Filters = {
+  search: string;
+  cpapModelId: string;
+  status: PatientStatus | "";
+};
 
 export const PER_PAGE = 8;
-const NO_FILTERS: Filters = { search: "", cpap: "", status: "" };
+const SEARCH_DELAY = 400;
+const NO_FILTERS: Filters = { search: "", cpapModelId: "", status: "" };
 
-const normalizeText = (text: string) => {
-  return text.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
+type LoadStatus = "loading" | "error" | "ready";
+
+type Result = {
+  key: string;
+  patients: Patient[];
+  total: number;
+  failed: boolean;
 };
 
 export function usePatients() {
-  const [patients, setPatients] = useState(listaPacientes);
+  const [result, setResult] = useState<Result | null>(null);
+  const [cpapModels, setCpapModels] = useState<CpapModel[]>([]);
   const [filters, setFilters] = useState(NO_FILTERS);
+  const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
+  const [attempt, setAttempt] = useState(0);
 
-  const term = normalizeText(filters.search.trim());
-  const filtered = patients.filter(
-    (p) =>
-      normalizeText(`${p.nome} ${p.cpap} ${p.serie}`).includes(term) &&
-      (!filters.cpap || p.cpap === filters.cpap) &&
-      (!filters.status || p.status === filters.status),
-  );
+  useEffect(() => {
+    const timer = setTimeout(() => setSearch(filters.search.trim()), SEARCH_DELAY);
+    return () => clearTimeout(timer);
+  }, [filters.search]);
 
-  // Qualquer mudança de filtro volta para a primeira página
-  function updateFilter(chave: keyof Filters, valor: string) {
-    setFilters((atual) => ({ ...atual, [chave]: valor }));
+  useEffect(() => {
+    fetchCpapModels()
+      .then(setCpapModels)
+      .catch(() => setCpapModels([]));
+  }, []);
+
+  const key = JSON.stringify([
+    page,
+    search,
+    filters.status,
+    filters.cpapModelId,
+    attempt,
+  ]);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchPatients({
+      page,
+      pageSize: PER_PAGE,
+      search,
+      status: filters.status,
+      cpapModelId: filters.cpapModelId,
+    })
+      .then((data) => {
+        if (!cancelled) setResult({ key, ...data, failed: false });
+      })
+      .catch(() => {
+        if (!cancelled)
+          setResult({ key, patients: [], total: 0, failed: true });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [key, page, search, filters.status, filters.cpapModelId]);
+
+  let loadStatus: LoadStatus = "loading";
+  if (result?.key === key) loadStatus = result.failed ? "error" : "ready";
+
+  function updateFilter(key: keyof Filters, value: string) {
+    setFilters((current) => ({ ...current, [key]: value }));
     setPage(1);
   }
 
   function clearFilters() {
     setFilters(NO_FILTERS);
+    setSearch("");
     setPage(1);
   }
 
-  function addPatient(novo: NewPatient) {
-    setPatients((atual) => [
-      ...atual,
-      { ...novo, id: Math.max(0, ...atual.map((p) => p.id)) + 1, status: "Ativo" },
-    ]);
-    clearFilters(); // garante que o novo paciente apareça na lista
-  }
+  const reload = useCallback(() => setAttempt((current) => current + 1), []);
 
   return {
     filters,
     hasFilters: Object.values(filters).some(Boolean),
-    CpapModels: [...new Set(patients.map((p) => p.cpap))],
-    total: filtered.length,
-    viewable: filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE),
+    cpapModels,
+    total: result?.total ?? 0,
+    patients: result?.patients ?? [],
+    loadStatus,
     page,
     setPage,
     updateFilter,
     clearFilters,
-    addPatient,
+    reload,
   };
 }

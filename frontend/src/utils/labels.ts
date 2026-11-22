@@ -1,5 +1,23 @@
 export type StatusColor = "success" | "warning" | "danger";
 
+export const badgeClasses: Record<StatusColor, string> = {
+  success: "bg-success-bg text-success-fg",
+  warning: "bg-warning-bg text-warning-fg",
+  danger: "bg-danger-bg text-danger-fg",
+};
+
+export const patientStatusLabels: Record<string, [string, StatusColor]> = {
+  ACTIVE: ["Ativo", "success"],
+  PAUSED: ["Pausado", "warning"],
+  INACTIVE: ["Inativo", "danger"],
+};
+
+export const filterTypeLabels: Record<string, string> = {
+  WASHABLE: "Lavável",
+  DISPOSABLE: "Descartável",
+  UNKNOWN: "Não informado",
+};
+
 export const messageCategoryLabels: Record<string, string> = {
   FILTER_WASH: "Higienização do filtro",
   FILTER_REPLACE_DISPOSABLE: "Troca de filtro",
@@ -76,6 +94,12 @@ const dayMonthFormat = new Intl.DateTimeFormat("pt-BR", {
   day: "2-digit",
   month: "2-digit",
 });
+
+const dateFormat = new Intl.DateTimeFormat("pt-BR", { timeZone: "UTC" });
+
+export function formatDate(iso: string | null) {
+  return iso ? dateFormat.format(new Date(iso)) : "-";
+}
 
 function isSameDay(a: Date, b: Date) {
   return a.toDateString() === b.toDateString();

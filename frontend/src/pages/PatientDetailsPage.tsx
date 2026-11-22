@@ -1,50 +1,34 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
+import { isAxiosError } from "axios";
 import { Link, useParams } from "react-router-dom";
-import { listaPacientes } from "../data/listaPacientes";
-import type { Patient } from "../hooks/usePatients";
+import { apiErrorMessage } from "../services/api";
+import {
+  fetchPatient,
+  openDocument,
+  type PatientDetails,
+} from "../services/patients";
+import {
+  auditActionLabels,
+  auditEntityLabels,
+  badgeClasses,
+  filterTypeLabels,
+  formatDate,
+  formatRelativeDate,
+  messageCategoryLabels,
+  patientStatusLabels,
+} from "../utils/labels";
 
-// Campos que ainda não existem em listaPacientes
-type PatientDetails = Patient &
-  Partial<{
-    celular: string;
-    email: string;
-    nascimento: string;
-    filtro: string;
-    desde: string
-  }>;
+type LoadState =
+  | { status: "loading" }
+  | { status: "notFound" }
+  | { status: "error" }
+  | { status: "ready"; patient: PatientDetails };
 
-// Dados de exemplo (trocar pela API depois)
-const atividades = [
-  {
-    titulo: "Mensagem enviada",
-    detalhe: "Higienização do filtro",
-    data: "Hoje · 09:42",
-  },
-  {
-    titulo: "Relatório processado",
-    detalhe: "AirView · Setembro 2026",
-    data: "20 out · 14:08",
-  },
-  {
-    titulo: "Dados atualizados",
-    detalhe: "Número de série confirmado",
-    data: "15 out · 11:20",
-  },
-  {
-    titulo: "Mensagem enviada",
-    detalhe: "Troca de filtro",
-    data: "12 out · 09:30",
-  },
-];
-const lembrete = {
-  nome: "Higienização do filtro",
-  quando: "em 8 dias · 4 nov 2026",
-};
-const documento = {
-  nome: "Polissonografia.pdf",
-  info: "PDF · 2,4 MB · 12 mar 2024",
-};
+function formatSize(bytes: number) {
+  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1).replace(".", ",")} MB`;
+}
 
 const tabs = [
   "Visão geral",
@@ -63,24 +47,48 @@ function Card({ title, children }: { title: string; children: ReactNode }) {
   );
 }
 
-function Data({ title, value }: { title: string; value?: string }) {
+function Data({ title, value }: { title: string; value?: string | null }) {
   return (
     <div>
       <dt className="text-xs text-muted">{title}</dt>
-      <dd className="mt-1 text-sm font-semibold">{value ?? "—"}</dd>
+      <dd className="mt-1 text-sm font-semibold">{value || "-"}</dd>
     </div>
   );
 }
 
-export default function PatientDetailsPage() {
-  const { id } = useParams();
+function PatientDetailsView({ id }: { id: string }) {
   const [tab, setTab] = useState(tabs[0]);
-  const patient = listaPacientes.find((p) => p.id === Number(id)) as PatientDetails | undefined;
+  const [state, setState] = useState<LoadState>({ status: "loading" });
+  const [documentError, setDocumentError] = useState("");
 
-  if (!patient) {
+  useEffect(() => {
+    let cancelled = false;
+    fetchPatient(id)
+      .then((patient) => {
+        if (!cancelled) setState({ status: "ready", patient });
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        const notFound =
+          isAxiosError(err) &&
+          (err.response?.status === 404 || err.response?.status === 400);
+        setState({ status: notFound ? "notFound" : "error" });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
+
+  if (state.status === "loading") {
+    return <p className="text-muted">Carregando...</p>;
+  }
+
+  if (state.status !== "ready") {
     return (
       <p className="text-muted">
-        Paciente não encontrado.{" "}
+        {state.status === "notFound"
+          ? "Paciente não encontrado."
+          : "Não foi possível carregar o paciente."}{" "}
         <Link className="text-link" to="/pacientes">
           Voltar para a lista
         </Link>
@@ -88,39 +96,53 @@ export default function PatientDetailsPage() {
     );
   }
 
-  const active = patient.status !== "Pausado";
+  const { patient } = state;
+  const [statusLabel, statusColor] = patientStatusLabels[patient.status];
+  const activities = patient.auditEvents.slice(0, 5);
+  const nextReminder = patient.messages
+    .filter((m) => m.status === "SCHEDULED" && m.scheduledAt)
+    .sort((a, b) => a.scheduledAt!.localeCompare(b.scheduledAt!))[0];
+  const latestDocument = patient.documents[0];
+
+  async function viewDocument() {
+    if (!latestDocument) return;
+    setDocumentError("");
+    try {
+      await openDocument(patient.id, latestDocument.id);
+    } catch (err) {
+      setDocumentError(
+        apiErrorMessage(err, "Não foi possível abrir o documento."),
+      );
+    }
+  }
 
   return (
     <>
-        <div className="flex justify-between items-center mb-6 max-[800px]:flex-col max-[800px]:items-start max-[800px]:gap-2">
-            <div>
-                <h2 className="text-[30px] leading-10 font-bold text-foreground max-[800px]:text-[25px]">
-                    {patient.nome}
-                </h2>
+      <div className="flex justify-between items-center mb-6 max-[800px]:flex-col max-[800px]:items-start max-[800px]:gap-2">
+        <div>
+          <h2 className="text-[30px] leading-10 font-bold text-foreground max-[800px]:text-[25px]">
+            {patient.fullName}
+          </h2>
 
-                <p className="mb-7 text-sm leading-5 text-muted">
-                    Paciente desde {patient.desde ?? "—"}
-                </p>
-            </div>
-
-            <div className="flex items-center gap-3">
-                <span
-                    className={`inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm ${
-                    active
-                        ? "bg-success-bg text-success-fg"
-                        : "bg-warning-bg text-warning-fg"
-                    }`}
-                >
-                    {patient.status}
-                </span>
-                <Link
-                    to={`/pacientes/${patient.id}/editar`}
-                    className="inline-flex min-h-11 items-center rounded-lg bg-primary px-5 py-2.5 text-sm text-primary-foreground focus-visible:outline-2 focus-visible:outline-offset-[3px] focus-visible:outline-link"
-                >
-                    Editar dados
-                </Link>
-            </div>
+          <p className="mb-7 text-sm leading-5 text-muted">
+            Paciente desde {formatDate(patient.therapyStartDate)}
+          </p>
         </div>
+
+        <div className="flex items-center gap-3">
+          <span
+            className={`inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm ${badgeClasses[statusColor]}`}
+          >
+            {statusLabel}
+          </span>
+          <Link
+            to={`/pacientes/${patient.id}/editar`}
+            className="inline-flex min-h-11 items-center rounded-lg bg-primary px-5 py-2.5 text-sm text-primary-foreground focus-visible:outline-2 focus-visible:outline-offset-[3px] focus-visible:outline-link"
+          >
+            Editar dados
+          </Link>
+        </div>
+      </div>
 
       <div
         role="tablist"
@@ -151,74 +173,124 @@ export default function PatientDetailsPage() {
           <div className="grid content-start gap-5">
             <Card title="Dados pessoais">
               <dl className="grid grid-cols-3 gap-x-6 gap-y-8 max-[800px]:grid-cols-1">
-                <Data title="Nome Completo" value={patient.nome} />
+                <Data title="Nome Completo" value={patient.fullName} />
 
-                <Data title="Celular / WhatsApp" value={patient.celular} />
+                <Data title="Celular / WhatsApp" value={patient.phone} />
 
-                <Data title="Data de Nascimento" value={patient.nascimento} />
+                <Data
+                  title="Data de Nascimento"
+                  value={patient.birthDate ? formatDate(patient.birthDate) : null}
+                />
 
-                <Data title="Idade" value={`${patient.idade} anos`} />
+                <Data
+                  title="Idade"
+                  value={patient.age === null ? null : `${patient.age} anos`}
+                />
 
                 <Data title="E-mail" value={patient.email} />
 
-                <Data title="Médico responsável" value={patient.medico} />
+                <Data title="Médico responsável" value={patient.physicianName} />
               </dl>
             </Card>
 
             <Card title="Atividade recente">
-              <ul>
-                {atividades.map((a, i) => (
-                  <li key={i} className="flex items-start gap-3.5 py-3">
-                    <span
-                      className={`mt-2 size-3 shrink-0 rounded-full ${i === 0 ? "bg-success-fg" : "bg-brand-300"}`}
-                    />
-                    <div className="min-w-0 flex-1">
-                      <h4 className="text-base font-semibold">{a.titulo}</h4>
-                      <p className="text-sm text-muted">{a.detalhe}</p>
-                    </div>
-                    <time className="text-sm whitespace-nowrap text-muted">
-                      {a.data}
-                    </time>
-                  </li>
-                ))}
-              </ul>
+              {activities.length === 0 ? (
+                <p className="text-sm text-muted">
+                  Nenhuma atividade registrada.
+                </p>
+              ) : (
+                <ul>
+                  {activities.map((a, i) => (
+                    <li key={a.id} className="flex items-start gap-3.5 py-3">
+                      <span
+                        className={`mt-2 size-3 shrink-0 rounded-full ${i === 0 ? "bg-success-fg" : "bg-brand-300"}`}
+                      />
+                      <div className="min-w-0 flex-1">
+                        <h4 className="text-base font-semibold">
+                          {auditActionLabels[a.action] ?? a.action}
+                        </h4>
+                        <p className="text-sm text-muted">
+                          {auditEntityLabels[a.entityType]?.[0] ?? a.entityType}
+                        </p>
+                      </div>
+                      <time className="text-sm whitespace-nowrap text-muted">
+                        {formatRelativeDate(a.createdAt)}
+                      </time>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </Card>
           </div>
 
           <div className="grid content-start gap-5">
             <Card title="Equipamento atual">
               <dl className="grid gap-5">
-                <Data title="CPAP" value={patient.cpap} />
+                <Data title="CPAP" value={patient.cpapModelName} />
 
-                <Data title="Número de série" value={patient.serie} />
+                <Data title="Número de série" value={patient.cpapSerialNumber} />
 
-                <Data title="Máscara · Filtro" value={`${patient.mascara} · ${patient.filtro ?? "—"}`} />
+                <Data
+                  title="Máscara · Filtro"
+                  value={`${patient.maskModel ?? "-"} · ${patient.filterType ? filterTypeLabels[patient.filterType] : "-"}`}
+                />
               </dl>
             </Card>
 
             <Card title="Próximo lembrete">
-              <p className="text-base text-muted">{lembrete.nome}</p>
-              <p className="mt-2 text-base font-semibold text-link">
-                {lembrete.quando}
-              </p>
+              {nextReminder ? (
+                <>
+                  <p className="text-base text-muted">
+                    {messageCategoryLabels[nextReminder.category] ??
+                      nextReminder.category}
+                  </p>
+                  <p className="mt-2 text-base font-semibold text-link">
+                    {formatRelativeDate(nextReminder.scheduledAt!)}
+                  </p>
+                </>
+              ) : (
+                <p className="text-sm text-muted">Nenhum lembrete agendado.</p>
+              )}
             </Card>
 
             <Card title="Documentos">
-              <p className="text-base font-semibold text-link">
-                {documento.nome}
-              </p>
-              <p className="mt-1 text-sm text-muted">{documento.info}</p>
-              <button
-                type="button"
-                onClick={() => setTab("Documentos")}
-                className="mt-6 cursor-pointer text-sm font-semibold text-link"
-              >
-                Ver documento →
-              </button>
+              {latestDocument ? (
+                <>
+                  <p className="text-base font-semibold text-link">
+                    {latestDocument.originalName}
+                  </p>
+                  <p className="mt-1 text-sm text-muted">
+                    PDF · {formatSize(latestDocument.sizeBytes)} ·{" "}
+                    {formatDate(latestDocument.createdAt)}
+                  </p>
+                  {documentError && (
+                    <p role="alert" className="mt-2 text-sm text-danger-fg">
+                      {documentError}
+                    </p>
+                  )}
+                  <button
+                    type="button"
+                    onClick={viewDocument}
+                    className="mt-6 cursor-pointer text-sm font-semibold text-link"
+                  >
+                    Ver documento →
+                  </button>
+                </>
+              ) : (
+                <p className="text-sm text-muted">
+                  Nenhum documento enviado.
+                </p>
+              )}
             </Card>
           </div>
         </div>
       )}
     </>
   );
+}
+
+export default function PatientDetailsPage() {
+  const { id } = useParams();
+  if (!id) return null;
+  return <PatientDetailsView key={id} id={id} />;
 }

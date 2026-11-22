@@ -1,23 +1,26 @@
 import { useState } from "react";
 import { ChevronUp, ChevronDown, Search } from "lucide-react";
 import type { Filters } from "../hooks/usePatients";
+import type { CpapModel } from "../services/patients";
+import { patientStatusLabels } from "../utils/labels";
 
 type Props = {
   filters: Filters;
-  CpapModels: string[];
+  cpapModels: CpapModel[];
   hasFilters: boolean;
-  onFilterChange: (chave: keyof Filters, valor: string) => void;
+  onFilterChange: (key: keyof Filters, value: string) => void;
   onClear: () => void;
 };
 
 export default function PatientsFilter({
   filters,
-  CpapModels,
+  cpapModels,
   hasFilters,
   onFilterChange,
   onClear,
 }: Props) {
   const [openFilters, setOpenFilters] = useState(false);
+  const selectedModel = cpapModels.find((m) => m.id === filters.cpapModelId);
 
   return (
     <>
@@ -28,7 +31,7 @@ export default function PatientsFilter({
             type="search"
             className="outline-none bg-transparent w-full"
             aria-label="Buscar pacientes"
-            placeholder="Buscar por nome ou série do CPAP..."
+            placeholder="Buscar por nome, CPF ou série do CPAP..."
             value={filters.search}
             onChange={(e) => onFilterChange("search", e.target.value)}
           />
@@ -44,14 +47,14 @@ export default function PatientsFilter({
           Filtros
         </button>
 
-        {filters.cpap && (
+        {filters.cpapModelId && (
           <button
             type="button"
             className="bg-link text-primary-foreground py-2 px-3 rounded-lg cursor-pointer"
             aria-label="Remover filtro de CPAP"
-            onClick={() => onFilterChange("cpap", "")}
+            onClick={() => onFilterChange("cpapModelId", "")}
           >
-            CPAP: {filters.cpap} x
+            CPAP: {selectedModel ? `${selectedModel.manufacturer} ${selectedModel.model}` : "selecionado"} x
           </button>
         )}
 
@@ -62,7 +65,7 @@ export default function PatientsFilter({
             aria-label="Remover filtro de status"
             onClick={() => onFilterChange("status", "")}
           >
-            Status: {filters.status} x
+            Status: {patientStatusLabels[filters.status][0]} x
           </button>
         )}
 
@@ -79,23 +82,23 @@ export default function PatientsFilter({
       </div>
 
       {openFilters && (
-        <div className="flex flex-wrap gap-4 -mt-2 mb-6 p-4" id="sono-filtros">
+        <div className="flex flex-wrap gap-4 -mt-2 mb-6 p-4" id="filtros-pacientes">
           <label className="flex gap-2 bg-surface rounded-lg px-4 py-3">
             CPAP
             <select
               className="outline-none"
-              value={filters.cpap}
+              value={filters.cpapModelId}
               onChange={(e) => {
-                onFilterChange("cpap", e.target.value);
+                onFilterChange("cpapModelId", e.target.value);
               }}
             >
               <option value="" className="text-black">
                 Todos
               </option>
 
-              {CpapModels.map((model) => (
-                <option key={model} className="text-black">
-                  {model}
+              {cpapModels.map((model) => (
+                <option key={model.id} value={model.id} className="text-black">
+                  {model.manufacturer} {model.model}
                 </option>
               ))}
             </select>
@@ -113,8 +116,11 @@ export default function PatientsFilter({
               <option value="" className="text-black">
                 Todos
               </option>
-              <option className="text-black">Ativo</option>
-              <option className="text-black">Pausado</option>
+              {Object.entries(patientStatusLabels).map(([value, [label]]) => (
+                <option key={value} value={value} className="text-black">
+                  {label}
+                </option>
+              ))}
             </select>
           </label>
         </div>
