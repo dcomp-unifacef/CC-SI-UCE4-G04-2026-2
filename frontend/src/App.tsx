@@ -9,6 +9,9 @@ import AppLayout from "./components/layout/AppLayout";
 import PublicRoute from "./components/PublicRoute";
 import ProtectedRoute from "./components/ProtectedRoute";
 import DashboardPage from "./pages/DashboardPage";
+import PatientsListPage from "./pages/PatientsListPage";
+import PatientFormPage from "./pages/PatientFormPage";
+import PatientDetailsPage from "./pages/PatientDetailsPage";
 
 function App() {
   return (
@@ -24,6 +27,11 @@ function App() {
       <Route element={<ProtectedRoute />}>
         <Route element={<AppLayout />}>
           <Route path="/inicio" element={<DashboardPage />} />
+
+          <Route path="/pacientes" element={<PatientsListPage />} />
+          <Route path="/pacientes/novo" element={<PatientFormPage />} />
+          <Route path="/pacientes/:id" element={<PatientDetailsPage />} />
+          <Route path="/pacientes/:id/editar" element={<PatientFormPage />} />
         </Route>
       </Route>
 

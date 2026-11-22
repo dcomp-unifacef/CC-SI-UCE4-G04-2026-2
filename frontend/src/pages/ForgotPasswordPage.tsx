@@ -33,6 +33,8 @@ export default function ForgotPasswordPage() {
             label="e-mail"
             icon={<Mail size={16} />}
             type="email"
+            required
+            uppercase
             placeholder="Digite seu e-mail"
             autoComplete="email"
             value={email}

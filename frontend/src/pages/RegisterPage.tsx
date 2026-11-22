@@ -72,6 +72,8 @@ export default function RegisterPage() {
           label="nome completo"
           icon={<User size={16} />}
           type="text"
+          required
+          uppercase
           placeholder="Digite seu nome completo"
           autoComplete="name"
           value={form.name}
@@ -83,6 +85,8 @@ export default function RegisterPage() {
           label="e-mail"
           icon={<AtSign size={16} />}
           type="email"
+          required
+          uppercase
           placeholder="Digite seu e-mail"
           autoComplete="email"
           value={form.email}
@@ -95,6 +99,8 @@ export default function RegisterPage() {
             label="senha"
             icon={<Lock size={16} />}
             type="password"
+            required
+            uppercase
             placeholder="Digite sua senha"
             autoComplete="new-password"
             value={form.password}
@@ -106,6 +112,8 @@ export default function RegisterPage() {
             label="confirmar senha"
             icon={<ShieldCheck size={16} />}
             type="password"
+            required
+            uppercase
             placeholder="Digite sua senha"
             autoComplete="new-password"
             value={form.confirmPassword}

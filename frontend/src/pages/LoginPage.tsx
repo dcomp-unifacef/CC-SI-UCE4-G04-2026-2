@@ -54,6 +54,8 @@ export default function LoginPage() {
           label="e-mail"
           icon={<AtSign size={16} />}
           type="email"
+          required
+          uppercase
           placeholder="Digite seu e-mail"
           autoComplete="email"
           value={form.email}
@@ -65,6 +67,8 @@ export default function LoginPage() {
           label="senha"
           icon={<Lock size={16} />}
           type="password"
+          required
+          uppercase
           placeholder="Digite sua senha"
           autoComplete="current-password"
           value={form.password}
