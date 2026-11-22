@@ -19,6 +19,10 @@ import MessageDetails from "./pages/MessageDetails";
 import ReportsListPage from "./pages/ReportsListPage";
 import ReportDetailsPage from "./pages/ReportDetailsPage";
 import ReportSendPage from "./pages/ReportSendPage";
+import AutomationsListPage from "./pages/AutomationsListPage";
+import AutomationRunDetails from "./pages/AutomationsRunDetails";
+import SettingsPage from "./pages/SettingsPage";
+import ReminderSettingsPage from "./pages/ReminderSettingsPage";
 
 function App() {
   return (
@@ -48,6 +52,12 @@ function App() {
           <Route path="/relatorios" element={<ReportsListPage />} />
           <Route path="/relatorios/:id" element={<ReportDetailsPage />} />
           <Route path="/relatorios/:id/enviar" element={<ReportSendPage />} />
+
+          <Route path="/automacoes" element={<AutomationsListPage />} />
+          <Route path="/automacoes/:id" element={<AutomationRunDetails />} />
+
+          <Route path="/configuracoes" element={<SettingsPage />} />
+          <Route path="/configuracoes/lembretes" element={<ReminderSettingsPage />} />
         </Route>
       </Route>
 
