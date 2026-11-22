@@ -21,7 +21,10 @@ const titles: [string, string][] = [
   ["/estoque", "Estoque & Produtos"],
   ["/configuracoes/lembretes", "Lembretes"],
   ["/configuracoes", "Configurações"],
-  ["/mensagens", "Mensagens"],
+  ["/mensagens/reconectar", "Mensagens / Reconectar WhatsApp"],
+  ["/mensagens/modelos/:id/editar", "Mensagens / Modelos / Editar"],
+  ["/mensagens/:id", "Detalhe do envio"],
+  ["/mensagens", "Mensagens — fila e conexão"],
   ["/relatorios", "Relatórios"],
   ["/automacoes", "Automações"],
 ];

@@ -12,6 +12,10 @@ import DashboardPage from "./pages/DashboardPage";
 import PatientsListPage from "./pages/PatientsListPage";
 import PatientFormPage from "./pages/PatientFormPage";
 import PatientDetailsPage from "./pages/PatientDetailsPage";
+import MessagesListPage from "./pages/MessagesListPage";
+import WhatsAppReconnect from "./pages/WhatsAppReconnect";
+import MessageTemplateForm from "./pages/MessageTemplateForm";
+import MessageDetails from "./pages/MessageDetails";
 
 function App() {
   return (
@@ -32,6 +36,11 @@ function App() {
           <Route path="/pacientes/novo" element={<PatientFormPage />} />
           <Route path="/pacientes/:id" element={<PatientDetailsPage />} />
           <Route path="/pacientes/:id/editar" element={<PatientFormPage />} />
+
+          <Route path="/mensagens" element={<MessagesListPage />} />
+          <Route path="/mensagens/reconectar" element={<WhatsAppReconnect />} />
+          <Route path="/mensagens/modelos/:id/editar" element={<MessageTemplateForm />} />
+          <Route path="/mensagens/:id" element={<MessageDetails />} />
         </Route>
       </Route>
 

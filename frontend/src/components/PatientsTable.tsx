@@ -44,7 +44,7 @@ export default function PatientsTable({
           {patients.map((p) => {
             const [statusLabel, statusColor] = patientStatusLabels[p.status];
             return (
-              <tr key={p.id}>
+              <tr key={p.id} className="border-t border-border">
                 <td className="px-4 py-3">
                   <Link
                     to={`/pacientes/${p.id}`}
